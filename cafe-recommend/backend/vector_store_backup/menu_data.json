@@ -1,0 +1,50 @@
+[
+  {
+    "id": 4,
+    "name": "초콜릿 프라페",
+    "description": "진한 초콜릿과 시원한 프라페의 만남",
+    "price": 6000.0,
+    "category": "프라페",
+    "properties": null,
+    "sweetness": 0.8,
+    "sourness": 0.1,
+    "bitterness": 0.4,
+    "temperature": "both"
+  },
+  {
+    "id": 4,
+    "name": "아메리카노",
+    "description": "깊고 진한 에스프레소와 뜨거운 물의 조화",
+    "price": 4500.0,
+    "category": "커피",
+    "properties": null,
+    "sweetness": 0.1,
+    "sourness": 0.7,
+    "bitterness": 0.8,
+    "temperature": "both"
+  },
+  {
+    "id": 5,
+    "name": "카푸치노",
+    "description": "에스프레소와 스팀 밀크, 우유 거품의 완벽한 조화",
+    "price": 5000.0,
+    "category": "커피",
+    "properties": null,
+    "sweetness": 0.0,
+    "sourness": 0.0,
+    "bitterness": 0.0,
+    "temperature": "both"
+  },
+  {
+    "id": 4,
+    "name": "카푸치노",
+    "description": "에스프레소와 스팀 밀크, 우유 거품의 완벽한 조화",
+    "price": 5000.0,
+    "category": "커피",
+    "properties": null,
+    "sweetness": 0.4,
+    "sourness": 0.3,
+    "bitterness": 0.6,
+    "temperature": "both"
+  }
+]

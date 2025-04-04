@@ -1,0 +1,117 @@
+INFO:     Started server process [263020]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:15026 (Press CTRL+C to quit)
+INFO:     121.174.217.102:63236 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63239 - "GET /docs HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63239 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63244 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63245 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63245 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:55987 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:55989 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     121.174.217.102:55989 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     121.174.217.102:55990 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:55990 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:55989 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     121.174.217.102:55989 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:55991 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     121.174.217.102:55991 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:49740 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:14434 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.234.188.16:38680 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.235.67.135:58467 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.235.67.135:58471 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     211.235.67.135:58472 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.67.135:58471 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.67.135:58472 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.234.196.185:52661 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     211.234.196.185:28956 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.234.196.185:52661 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     211.234.196.185:28956 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.67.135:58473 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.67.135:58473 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.67.135:58474 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.67.135:58474 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.67.135:58475 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.67.135:58475 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.67.135:58476 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.67.135:58476 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.67.135:58477 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.67.135:58477 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.234.188.108:35101 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.234.188.108:35101 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.234.188.108:41772 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.234.188.108:41772 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.235.66.107:57866 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.235.66.107:57869 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     211.235.66.107:57869 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.107:57870 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.107:14893 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.234.188.108:37430 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.234.188.108:37430 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     211.234.188.108:37430 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.234.188.108:1344 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     211.234.188.108:37430 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.107:49510 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.235.66.107:46001 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.235.66.107:49510 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.38:51191 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.235.66.38:51197 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     211.235.66.38:51197 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.38:51197 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.38:51198 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.38:51199 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.38:51199 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.234.197.233:60354 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.234.197.233:60356 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     211.234.197.233:60356 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.234.197.233:60357 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     211.234.197.233:60357 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.234.188.108:47198 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.234.188.108:47198 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.234.188.108:42879 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.234.188.108:42879 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.38:51200 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.38:51200 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.38:51205 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.38:51205 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.38:51207 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.38:51207 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.38:51208 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.38:51208 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.38:7964 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.38:7964 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.66.38:51219 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.235.66.38:51219 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.234.192.138:18746 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.36.141.246:23435 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.36.141.246:59997 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     211.36.141.246:59997 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.36.141.246:8110 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     211.36.141.246:59997 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.36.141.246:18087 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     211.36.141.246:18087 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.36.141.246:56279 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     211.36.141.246:56279 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63300 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63308 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63309 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     121.174.217.102:63308 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63309 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63310 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63311 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:60726 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:61121 - "GET /recommendations/popular HTTP/1.1" 200 OK
+INFO:     121.174.217.102:61324 - "OPTIONS /chat HTTP/1.1" 200 OK
+INFO:     121.174.217.102:61324 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     121.174.217.102:61325 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:61324 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:61331 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     121.174.217.102:61331 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:61332 - "POST /chat HTTP/1.1" 307 Temporary Redirect
+INFO:     121.174.217.102:61332 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [263020]

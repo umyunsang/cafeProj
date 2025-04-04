@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --border: #E0E0E0;
+    --primary: #4A90E2;
+    --accent: #E63946;
+    --secondary: #F4A261;
+    --neon: #9b5de5;
+  }
+
+  .dark {
+    --border: #333333;
+    --primary: #4A90E2;
+    --accent: #E63946;
+    --secondary: #F4A261;
+    --neon: #9b5de5;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-[color:var(--border)];
+  }
+  
+  body {
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .glassmorphism {
+    @apply backdrop-blur-sm bg-white/10 dark:bg-black/10 border border-white/20 dark:border-white/10;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+  }
+
+  .gradient-border {
+    @apply border-2 border-transparent bg-gradient-to-r from-primary to-accent bg-clip-border;
+  }
+
+  .neon-glow {
+    @apply relative;
+  }
+
+  .neon-glow::before {
+    content: '';
+    @apply absolute inset-0 -z-10 blur-xl bg-gradient-to-r from-neon to-accent opacity-50;
+  }
+}

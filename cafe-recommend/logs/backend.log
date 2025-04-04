@@ -1,0 +1,54 @@
+INFO:     Started server process [592447]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:15026 (Press CTRL+C to quit)
+INFO:     127.0.0.1:36498 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.10.1:34054 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:62494 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:62497 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:62497 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:44782 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:32870 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:40044 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:35938 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:39896 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63140 - "GET /docs HTTP/1.1" 200 OK
+INFO:     121.174.217.102:63140 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     211.235.74.236:45889 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.74.236:45889 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.74.236:38700 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:44280 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:48466 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:59778 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     220.92.71.56:65026 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     220.92.71.56:65026 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:44264 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:41936 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:45364 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     192.168.10.1:46604 - "GET /menus/ HTTP/1.1" 200 OK
+INFO:     211.55.188.145:65208 - "OPTIONS /chat/ HTTP/1.1" 200 OK
+INFO:     211.55.188.145:65208 - "POST /chat/ HTTP/1.1" 200 OK
+INFO:     211.235.73.231:34407 - "GET /docs HTTP/1.1" 200 OK
+INFO:     211.235.73.231:34407 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     211.231.103.92:51668 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     27.0.238.182:59586 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     27.0.238.182:59638 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     211.55.188.145:65465 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     211.55.188.145:65465 - "GET /docs HTTP/1.1" 200 OK
+INFO:     211.55.188.145:65465 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     211.231.103.94:33094 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     211.231.103.94:33102 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     27.0.238.181:51270 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     211.32.131.114:32867 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     211.32.131.114:32867 - "GET /docs HTTP/1.1" 200 OK
+INFO:     211.32.131.114:32867 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     211.32.131.114:24886 - "GET /apple-touch-icon-precomposed.png HTTP/1.1" 404 Not Found
+INFO:     211.32.131.114:43825 - "GET /apple-touch-icon.png HTTP/1.1" 404 Not Found
+INFO:     211.32.131.114:6154 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     211.32.131.114:48511 - "GET /docs HTTP/1.1" 200 OK
+INFO:     211.32.131.114:21036 - "GET /docs HTTP/1.1" 200 OK
+INFO:     211.32.131.114:21036 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     27.0.238.114:37862 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     27.0.238.114:37866 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     211.231.103.105:57588 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
+INFO:     211.231.103.105:57594 - "GET /docs/ HTTP/1.1" 307 Temporary Redirect
