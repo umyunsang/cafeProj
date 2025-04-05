@@ -1,7 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models.menu import Menu
+from app.models.user import User
 from app.core.config import settings
+from app.core.security import get_password_hash
 from datetime import datetime
 
 # 데이터베이스 연결
@@ -74,6 +76,20 @@ initial_menus = [
 ]
 
 try:
+    # 관리자 계정 생성
+    admin = db.query(User).filter(User.email == "admin@example.com").first()
+    if not admin:
+        admin = User(
+            email="admin@example.com",
+            hashed_password=get_password_hash("admin123"),
+            is_active=True,
+            is_admin=True
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+        print("관리자 계정이 생성되었습니다.")
+    
     # 기존 메뉴 모두 삭제
     db.query(Menu).delete()
     db.commit()
@@ -87,7 +103,9 @@ try:
             category=menu_data["category"],
             order_count=0,
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            updated_at=datetime.utcnow(),
+            created_by=admin.id,
+            updated_by=admin.id
         )
         db.add(menu)
     

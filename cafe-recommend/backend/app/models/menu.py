@@ -6,6 +6,7 @@ from app.db.base_class import Base
 
 if TYPE_CHECKING:
     from .order import OrderItem  # noqa: F401
+    from .cart import CartItem  # noqa: F401
 
 class Menu(Base):
     __tablename__ = "menus"
@@ -22,6 +23,10 @@ class Menu(Base):
     # 타임스탬프
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 관리자 정보
+    created_by = Column(Integer, nullable=True)
+    updated_by = Column(Integer, nullable=True)
     
     # 관계 설정
     order_items = relationship("OrderItem", back_populates="menu")

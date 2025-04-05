@@ -3,9 +3,10 @@ from typing import Dict, Any
 from .menu import menu
 from .user import user
 from .order import order
+from . import cart
 
 # Export all crud objects
-__all__ = ["menu", "user", "order"]
+__all__ = ["menu", "user", "order", "cart"]
 
 # For a new basic set of CRUD operations you could just do:
 # from .base import CRUDBase

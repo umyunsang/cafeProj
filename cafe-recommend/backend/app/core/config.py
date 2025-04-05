@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # CORS 설정 - 모든 출처 허용
-    BACKEND_CORS_ORIGINS: List[str] = ["*"]
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
     
     # JWT 설정
     SECRET_KEY: str = "your-secret-key-here"  # 실제 운영 환경에서는 환경 변수로 관리
@@ -81,7 +81,20 @@ class Settings(BaseSettings):
 - 추천 이유: ...
 """
     
+    # OpenAI API 키
+    OPENAI_API_KEY: Optional[str] = None
+    
+    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        raise ValueError(v)
+
     class Config:
         case_sensitive = True
+        env_file = ".env"
+        extra = "allow"  # 추가 필드 허용
 
 settings = Settings() 

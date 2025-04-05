@@ -6,6 +6,18 @@ const nextConfig = {
       allowedForwardedHosts: ['116.124.191.174'],
     },
   },
+  webpack: (config, { isServer }) => {
+    // 클립보드 API 폴리필 추가
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
+  },
   async headers() {
     return [
       {
@@ -22,15 +34,23 @@ const nextConfig = {
     return [
       {
         source: '/api/menus',
-        destination: 'http://116.124.191.174:15026/menus/'
+        destination: 'http://116.124.191.174:15026/api/menus/'
       },
       {
         source: '/api/menus/',
-        destination: 'http://116.124.191.174:15026/menus/'
+        destination: 'http://116.124.191.174:15026/api/menus/'
+      },
+      {
+        source: '/api/chat',
+        destination: 'http://116.124.191.174:15026/api/chat/'
+      },
+      {
+        source: '/api/chat/',
+        destination: 'http://116.124.191.174:15026/api/chat/'
       },
       {
         source: '/api/:path*',
-        destination: 'http://116.124.191.174:15026/:path*'
+        destination: 'http://116.124.191.174:15026/api/:path*'
       }
     ]
   }

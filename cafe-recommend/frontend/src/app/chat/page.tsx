@@ -57,7 +57,7 @@ export default function ChatPage() {
       setMessages(prev => [...prev, userMessage]);
       setInput('');
 
-      const response = await fetch('http://116.124.191.174:15026/chat/', {
+      const response = await fetch('/api/chat/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -189,6 +189,7 @@ export default function ChatPage() {
               recommendations.map((menu) => (
                 <MenuCard
                   key={menu.id}
+                  id={menu.id}
                   name={menu.name}
                   description={menu.description}
                   price={menu.price}
@@ -196,11 +197,9 @@ export default function ChatPage() {
                 />
               ))
             ) : (
-              <Card className="p-4 border border-primary/10">
-                <p className="text-center text-gray-500">
-                  대화를 나누면 맞춤 메뉴를 추천해드립니다.
-                </p>
-              </Card>
+              <div className="text-center text-muted-foreground py-8">
+                추천 메뉴가 없습니다.
+              </div>
             )}
           </div>
         </div>

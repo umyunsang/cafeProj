@@ -1,43 +1,58 @@
+'use client';
+
+import { Card } from '@/components/ui/card';
 import { cn } from "@/lib/utils";
+import { useCart } from '@/components/cart/CartContext';
+import { toast } from 'sonner';
 
 interface MenuCardProps {
+  id: number;
   name: string;
+  description: string;
   price: number;
-  description?: string;
   category: string;
   className?: string;
 }
 
-export function MenuCard({ name, price, description, category, className }: MenuCardProps) {
+export function MenuCard({
+  id,
+  name,
+  description,
+  price,
+  category,
+  className,
+}: MenuCardProps) {
+  const { addToCart } = useCart();
+
+  const handleCardClick = async () => {
+    try {
+      await addToCart(id, 1);
+      toast.success(`${name}이(가) 장바구니에 추가되었습니다.`);
+    } catch (error) {
+      toast.error('장바구니에 추가하는데 실패했습니다.');
+    }
+  };
+
   return (
-    <div className={cn(
-      "rounded-xl border bg-card p-6 transition-all hover:shadow-lg",
-      "hover:scale-[1.02] hover:border-primary/20",
-      className
-    )}>
-      <div className="space-y-4">
-        {/* 메뉴 이름과 가격 */}
-        <div className="flex items-start justify-between gap-4">
-          <h3 className="font-semibold text-xl leading-tight">{name}</h3>
-          <div className="text-lg font-medium text-primary">
-            {price.toLocaleString()}원
+    <Card 
+      className={cn(
+        "overflow-hidden transition-all hover:shadow-lg hover:scale-[1.02] cursor-pointer",
+        className
+      )}
+      onClick={handleCardClick}
+    >
+      <div className="p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-lg">{name}</h3>
+          <div className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+            {category}
           </div>
         </div>
-
-        {/* 카테고리 */}
-        <div>
-          <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
-            {category}
-          </span>
+        <p className="text-sm text-gray-500 line-clamp-2">{description}</p>
+        <div className="flex items-center justify-between pt-2">
+          <span className="font-medium">{price.toLocaleString()}원</span>
         </div>
-
-        {/* 설명 */}
-        {description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {description}
-          </p>
-        )}
       </div>
-    </div>
+    </Card>
   );
 } 

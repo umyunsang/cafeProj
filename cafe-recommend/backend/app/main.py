@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from .routers.chat import router as chat_router
 from .routers.menus import router as menus_router
+from .routers.cart import router as cart_router
 
 app = FastAPI()
 
@@ -15,8 +16,9 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(chat_router)
-app.include_router(menus_router)
+app.include_router(chat_router, prefix="/api")
+app.include_router(menus_router, prefix="/api")
+app.include_router(cart_router, prefix="/api")
 
 @app.get("/")
 async def root():

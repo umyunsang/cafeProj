@@ -145,6 +145,7 @@ export default function MenuPage() {
             transition={{ duration: 0.3 }}
           >
             <MenuCard
+              id={menu.id}
               name={menu.name}
               price={menu.price}
               description={menu.description || undefined}
