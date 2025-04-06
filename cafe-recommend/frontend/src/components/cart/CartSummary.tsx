@@ -16,22 +16,16 @@ interface CartSummaryProps {
 }
 
 export function CartSummary({ cart }: CartSummaryProps) {
-  const subtotal = cart.items.reduce(
+  const total = cart.items.reduce(
     (sum, item) => sum + (item.menu?.price || 0) * item.quantity,
     0
   );
-  const tax = Math.round(subtotal * 0.1); // 10% 세금
-  const total = subtotal + tax;
 
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm text-gray-600">
         <span>소계</span>
-        <span>{subtotal.toLocaleString()}원</span>
-      </div>
-      <div className="flex justify-between text-sm text-gray-600">
-        <span>세금 (10%)</span>
-        <span>{tax.toLocaleString()}원</span>
+        <span>{total.toLocaleString()}원</span>
       </div>
       <div className="flex justify-between font-medium text-lg pt-2 border-t">
         <span>총계</span>

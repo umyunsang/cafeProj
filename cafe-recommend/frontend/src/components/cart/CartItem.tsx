@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Minus, Plus, Trash2 } from 'lucide-react';
-import { useCart } from './CartContext';
+import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 
 interface CartItemProps {

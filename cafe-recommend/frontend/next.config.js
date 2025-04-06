@@ -33,26 +33,10 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/menus',
-        destination: 'http://116.124.191.174:15026/api/menus/'
-      },
-      {
-        source: '/api/menus/',
-        destination: 'http://116.124.191.174:15026/api/menus/'
-      },
-      {
-        source: '/api/chat',
-        destination: 'http://116.124.191.174:15026/api/chat/'
-      },
-      {
-        source: '/api/chat/',
-        destination: 'http://116.124.191.174:15026/api/chat/'
-      },
-      {
         source: '/api/:path*',
         destination: 'http://116.124.191.174:15026/api/:path*'
       }
-    ]
+    ];
   }
 }
 

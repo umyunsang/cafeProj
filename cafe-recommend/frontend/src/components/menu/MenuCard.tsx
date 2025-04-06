@@ -2,7 +2,7 @@
 
 import { Card } from '@/components/ui/card';
 import { cn } from "@/lib/utils";
-import { useCart } from '@/components/cart/CartContext';
+import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 
 interface MenuCardProps {

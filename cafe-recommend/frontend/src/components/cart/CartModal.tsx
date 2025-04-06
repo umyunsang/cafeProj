@@ -3,13 +3,14 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useCart } from './CartContext';
-import { CartItem } from './CartItem';
-import { CartSummary } from './CartSummary';
+import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
+import { Card } from '@/components/ui/card';
 
 export function CartModal() {
-  const { isOpen, closeCart, cart, loading, error } = useCart();
+  const router = useRouter();
+  const { items, isOpen, closeCart, updateQuantity, removeItem, error, loading } = useCart();
   const modalRef = useRef<HTMLDivElement>(null);
 
   // ESC 키로 모달 닫기
@@ -32,6 +33,17 @@ export function CartModal() {
   // 오버레이 클릭 시 모달 닫기
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) closeCart();
+  };
+
+  const calculateSubtotal = () => {
+    if (!items) return 0;
+    return items.reduce((total, item) => {
+      return total + (item.menu.price * item.quantity);
+    }, 0);
+  };
+
+  const calculateTotal = () => {
+    return calculateSubtotal();
   };
 
   return (
@@ -77,42 +89,82 @@ export function CartModal() {
                 </div>
               ) : error ? (
                 <div className="text-red-500 text-center p-4">{error}</div>
-              ) : cart?.items.length === 0 ? (
+              ) : !items || items.length === 0 ? (
                 <div className="text-center text-gray-500 p-4">
                   장바구니가 비어있습니다.
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {cart?.items.map((item) => (
-                    <CartItem key={item.id} item={item} />
+                  {items.map((item) => (
+                    <Card key={`${item.menu_id}-${item.id}`} className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex-1">
+                          <h3 className="text-base font-semibold">{item.menu.name}</h3>
+                          <p className="text-sm text-gray-500">
+                            {item.menu.price.toLocaleString()}원 x {item.quantity} = {(item.menu.price * item.quantity).toLocaleString()}원
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-1 border rounded-md">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(item.menu_id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                            >
+                              -
+                            </Button>
+                            <span className="w-8 text-center">{item.quantity}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(item.menu_id, item.quantity + 1)}
+                            >
+                              +
+                            </Button>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white"
+                            onClick={() => removeItem(item.menu_id)}
+                            aria-label="항목 삭제"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
                   ))}
                 </div>
               )}
             </div>
 
             {/* 푸터 */}
-            {cart && cart.items.length > 0 && (
+            {items && items.length > 0 && (
               <div className="border-t p-4">
-                <CartSummary cart={cart} />
-                <div className="mt-4 space-y-2">
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={() => {
-                      // 주문 처리 로직
-                      console.log('주문 처리');
-                    }}
-                  >
-                    주문하기
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={closeCart}
-                  >
-                    계속 쇼핑하기
-                  </Button>
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">소계</span>
+                    <span>{calculateSubtotal().toLocaleString()}원</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="font-semibold">총계</span>
+                    <span className="font-bold">{calculateTotal().toLocaleString()}원</span>
+                  </div>
                 </div>
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={() => {
+                    closeCart();
+                    router.push('/checkout');
+                  }}
+                >
+                  주문하기
+                </Button>
               </div>
             )}
           </motion.div>

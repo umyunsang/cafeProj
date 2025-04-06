@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from "next/link";
 import { CONFIG } from "@/config";
-import { CartProvider } from '@/components/cart/CartContext';
+import { CartProvider } from '@/contexts/CartContext';
 import { CartModal } from '@/components/cart/CartModal';
 import { CartButton } from '@/components/cart/CartButton';
 import { Toaster } from 'sonner';
@@ -13,11 +13,11 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
   return (
     <CartProvider>
-      <nav className="sticky top-0 z-50 backdrop-blur-md bg-white/70 dark:bg-gray-900/70 border-b border-[color:var(--border)]">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <Link href="/" className="text-xl md:text-2xl font-bold gradient-text">
-              {CONFIG.site.name}
+      <header className="sticky top-0 z-50 w-full border-b border-[color:var(--border)] bg-white/50 backdrop-blur-xl dark:bg-gray-900/50">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between">
+            <Link href="/" className="flex items-center space-x-2">
+              <span className="text-2xl font-bold gradient-text">{CONFIG.site.name}</span>
             </Link>
             
             <div className="flex items-center gap-4">
@@ -58,30 +58,10 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           </div>
-
-          {/* 모바일 메뉴 */}
-          <div className={`md:hidden transition-all duration-300 ease-in-out ${isMenuOpen ? 'max-h-40 opacity-100 mt-4' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-            <div className="flex flex-col gap-4 py-4">
-              <Link 
-                href="/chat" 
-                className="glassmorphism px-4 py-3 rounded-lg text-center hover:bg-gradient-blue hover:text-white transition-all duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                AI 상담사
-              </Link>
-              <Link 
-                href="/menu" 
-                className="glassmorphism px-4 py-3 rounded-lg text-center hover:bg-gradient-blue hover:text-white transition-all duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                메뉴 보기
-              </Link>
-            </div>
-          </div>
         </div>
-      </nav>
-      
-      <main className="min-h-[calc(100vh-64px)]">
+      </header>
+
+      <main className="flex-1">
         {children}
       </main>
 
