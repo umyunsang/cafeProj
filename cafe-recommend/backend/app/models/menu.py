@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-from sqlalchemy import Column, Integer, String, Float, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.base_class import Base
@@ -19,6 +19,10 @@ class Menu(Base):
     
     # 주문 통계
     order_count = Column(Integer, default=0)
+    
+    # 상태
+    is_available = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
     
     # 타임스탬프
     created_at = Column(DateTime, default=datetime.utcnow)

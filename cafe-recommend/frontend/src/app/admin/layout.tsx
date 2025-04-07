@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function AdminLayout({
   children,
@@ -9,31 +9,25 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    router.push('/admin');
-  };
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("adminToken");
+      // 로그인된 상태에서 /admin 접속 시 메뉴 관리 페이지로 이동
+      if (token && pathname === "/admin") {
+        router.push("/admin/menus");
+      }
+    } catch (error) {
+      console.error("localStorage access error:", error);
+    }
+  }, [pathname, router]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">관리자 페이지</h1>
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              onClick={handleLogout}
-              className="text-sm font-medium text-muted-foreground hover:bg-gray-100"
-            >
-              로그아웃
-            </Button>
-          </div>
-        </div>
-      </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
-      </main>
+      </div>
     </div>
   );
 } 

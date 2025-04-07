@@ -11,8 +11,9 @@ class TimeStampedBase(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 # Import all models here for Alembic
-from app.db.base_class import Base  # noqa: F401
-from app.models.user import User  # noqa: F401
-from app.models.menu import Menu  # noqa: F401
-from app.models.order import Order  # noqa: F401
-from app.models.cart import Cart, CartItem  # noqa: F401 
+from app.db.base_class import Base  # noqa
+from app.models.user import User  # noqa
+from app.models.menu import Menu  # noqa
+from app.models.cart import Cart, CartItem  # noqa
+from app.models.order import Order, OrderItem  # noqa
+from app.models.payment import PaymentConfig  # noqa 

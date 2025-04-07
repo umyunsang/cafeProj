@@ -5,7 +5,7 @@ from app.core.config import settings
 
 # SQLAlchemy 엔진 생성
 engine = create_engine(
-    settings.DATABASE_URI,
+    settings.SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False}  # SQLite를 위한 설정
 )
 

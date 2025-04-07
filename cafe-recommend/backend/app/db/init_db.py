@@ -5,12 +5,11 @@ from app.schemas.user import UserCreate
 from app.schemas.menu import MenuCreate
 from app.db.base import Base
 from app.db.session import engine
+from app.models.payment import PaymentConfig
+from app.models.menu import Menu
 
-def init_db(db: Session) -> None:
-    # 데이터베이스 테이블 생성
-    Base.metadata.create_all(bind=engine)
-    
-    # 초기 관리자 계정 생성
+def init_admin(db: Session) -> None:
+    """관리자 계정 초기화"""
     admin = user.get_by_email(db, email=settings.FIRST_SUPERUSER_EMAIL)
     if not admin:
         user_in = UserCreate(
@@ -22,9 +21,12 @@ def init_db(db: Session) -> None:
             sourness=0.3,
             bitterness=0.3
         )
-        user.create(db, obj_in=user_in)
-    
-    # 초기 메뉴 데이터
+        admin = user.create(db, obj_in=user_in)
+        print("관리자 계정이 생성되었습니다.")
+    return admin
+
+def init_menus(db: Session, admin_id: int) -> None:
+    """메뉴 데이터 초기화"""
     initial_menus = [
         {
             "name": "아메리카노",
@@ -55,11 +57,54 @@ def init_db(db: Session) -> None:
         }
     ]
     
-    # 초기 메뉴 추가
     for menu_data in initial_menus:
         menu_obj = menu.get_by_name(db, name=menu_data["name"])
         if not menu_obj:
             menu_in = MenuCreate(**menu_data)
-            menu.create(db, menu_in=menu_in)
+            menu.create(db, menu_in=menu_in, admin_id=admin_id)
+    print("메뉴 데이터가 초기화되었습니다.")
+
+def init_payment_configs(db: Session) -> None:
+    """결제 설정 초기화"""
+    # 네이버페이 설정
+    naver_pay = db.query(PaymentConfig).filter(PaymentConfig.provider == "naver").first()
+    if not naver_pay:
+        naver_pay = PaymentConfig(
+            provider="naver",
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            is_active=True
+        )
+        db.add(naver_pay)
+        print("네이버페이 설정이 추가되었습니다.")
+
+    # 카카오페이 설정
+    kakao_pay = db.query(PaymentConfig).filter(PaymentConfig.provider == "kakao").first()
+    if not kakao_pay:
+        kakao_pay = PaymentConfig(
+            provider="kakao",
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            is_active=True
+        )
+        db.add(kakao_pay)
+        print("카카오페이 설정이 추가되었습니다.")
+
+    db.commit()
+
+def init_db(db: Session) -> None:
+    """데이터베이스 초기화"""
+    # 데이터베이스 테이블 생성
+    Base.metadata.create_all(bind=engine)
+    print("데이터베이스 테이블이 생성되었습니다.")
     
-    db.commit() 
+    # 관리자 계정 생성
+    admin = init_admin(db)
+    
+    # 메뉴 초기화
+    init_menus(db, admin.id)
+    
+    # 결제 설정 초기화
+    init_payment_configs(db)
+    
+    print("데이터베이스 초기화가 완료되었습니다.") 

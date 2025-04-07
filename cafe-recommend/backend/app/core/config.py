@@ -9,7 +9,11 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # CORS 설정 - 모든 출처 허용
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost:8080",
+    ]
     
     # JWT 설정
     SECRET_KEY: str = "your-secret-key-here"  # 실제 운영 환경에서는 환경 변수로 관리
@@ -17,12 +21,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     
     # 데이터베이스 설정
-    SQLITE_DB: str = "cafe_recommend.db"
-    DATABASE_URI: Optional[str] = f"sqlite:///./{SQLITE_DB}"
+    SQLALCHEMY_DATABASE_URL: str = "sqlite:////home/uys_1705817/aiProj/cafe-recommend/backend/app.db"
     
     # 초기 관리자 계정
-    FIRST_SUPERUSER_EMAIL: str = "admin@example.com"
-    FIRST_SUPERUSER_PASSWORD: str = "admin123"
+    FIRST_SUPERUSER_EMAIL: str = "admin@test.com"
+    FIRST_SUPERUSER_PASSWORD: str = "admin"
     
     # AI 설정
     MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY", "SsWG3SGGRjwfXyhbFdivGyPUj8MV9DUz")
@@ -83,6 +86,18 @@ class Settings(BaseSettings):
     
     # OpenAI API 키
     OPENAI_API_KEY: Optional[str] = None
+    
+    # 네이버페이 설정
+    NAVER_PAY_API_URL: str = "https://dev.apis.naver.com/naverpay-partner"
+    NAVER_CLIENT_ID: str = ""
+    NAVER_CLIENT_SECRET: str = ""
+
+    # 카카오페이 설정
+    KAKAO_PAY_API_URL: str = "https://kapi.kakao.com"
+    KAKAO_ADMIN_KEY: str = "d6f8cf9ed125ce95eaca902cc2af20e7"
+
+    # 프론트엔드 URL
+    FRONTEND_URL: str = "http://116.124.191.174:15022"
     
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:

@@ -19,8 +19,9 @@ class OrderItem(Base):
     quantity = Column(Integer)
     unit_price = Column(Float)
     total_price = Column(Float)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status = Column(String, default="pending")  # pending, completed
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     order = relationship("Order", back_populates="order_items")
     menu = relationship("Menu", back_populates="order_items")
@@ -29,14 +30,18 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 비회원 주문 허용
     total_amount = Column(Float, default=0.0)
     status = Column(String, default="pending")  # pending, paid, completed, cancelled
     payment_method = Column(String, nullable=True)
+    payment_key = Column(String, nullable=True)  # 결제 고유 번호 (tid)
+    session_id = Column(String, nullable=True)  # 비회원 주문 추적용
+    delivery_address = Column(String, nullable=True)  # 배달 주소
+    delivery_request = Column(String, nullable=True)  # 배달 요청사항
+    phone_number = Column(String, nullable=True)  # 연락처
     
     # 주문 상세 정보 (JSON 형식으로 저장)
-    # [{"menu_id": 1, "quantity": 2, "price": 5000}, ...]
-    items = Column(JSON, nullable=False)
+    items = Column(String, nullable=True)  # JSON 형식의 주문 아이템 목록
     
     # 주문 시간
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -185,12 +185,9 @@ export default function PaymentSuccessPage() {
         <Card className="max-w-lg mx-auto p-6">
           <h1 className="text-2xl font-bold mb-4 text-center">결제 오류</h1>
           <p className="text-red-500 text-center mb-4">{error}</p>
-          <div className="mt-6 space-x-4 text-center">
-            <Button onClick={() => router.push('/menu')}>
+          <div className="mt-6 text-center">
+            <Button onClick={() => router.push('/menu')} className="w-full">
               메뉴로 돌아가기
-            </Button>
-            <Button onClick={() => router.push('/mypage/orders')} variant="outline">
-              주문 내역 보기
             </Button>
           </div>
         </Card>
@@ -267,12 +264,9 @@ export default function PaymentSuccessPage() {
           </div>
         )}
 
-        <div className="mt-8 flex flex-col gap-2">
+        <div className="mt-8 text-center">
           <Button onClick={() => router.push('/menu')} className="w-full">
             메뉴로 돌아가기
-          </Button>
-          <Button onClick={() => router.push('/mypage/orders')} variant="outline" className="w-full">
-            주문 내역 보기
           </Button>
         </div>
       </Card>

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 from .menu import Menu
@@ -17,32 +17,73 @@ class OrderItem(OrderItemBase):
     id: int
     order_id: int
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
+    status: Optional[str] = "pending"  # pending, completed
 
     class Config:
         from_attributes = True
 
 class OrderBase(BaseModel):
-    user_id: int
+    user_id: Optional[int] = None
     status: str = "pending"  # pending, confirmed, completed, cancelled
-    total_amount: float
+    total_amount: float = 0.0
 
-class OrderCreate(BaseModel):
-    items: List[OrderItemBase]
-    payment_method: Optional[str] = None
+class OrderCreate(OrderBase):
+    items: List[OrderItemCreate]
 
 class OrderUpdate(BaseModel):
     status: str
 
-class OrderResponse(BaseModel):
+class OrderResponse(OrderBase):
     id: int
-    user_id: int
+    order_number: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    items: List[Dict[str, Any]]
+    payment_method: Optional[str] = None
+    payment_key: Optional[str] = None
+    session_id: Optional[str] = None
+    delivery_address: Optional[str] = None
+    delivery_request: Optional[str] = None
+    phone_number: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+# 관리자용 주문 스키마
+class OrderItemStatusUpdate(BaseModel):
+    status: str
+
+class AdminOrderItemResponse(BaseModel):
+    id: int
+    order_id: int
+    menu_id: int
+    menu_name: str
+    quantity: int
+    unit_price: float
+    total_price: float
+    status: Optional[str] = "pending"  # pending, completed
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class AdminOrderResponse(BaseModel):
+    id: int
+    order_number: str
+    user_id: Optional[int] = None
     total_amount: float
     status: str
-    payment_method: Optional[str]
-    items: List[OrderItemBase]
+    payment_method: Optional[str] = None
+    payment_key: Optional[str] = None
+    session_id: Optional[str] = None
+    delivery_address: Optional[str] = None
+    delivery_request: Optional[str] = None
+    phone_number: Optional[str] = None
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
+    items: List[AdminOrderItemResponse]
 
     class Config:
         from_attributes = True

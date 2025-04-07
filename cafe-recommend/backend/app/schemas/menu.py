@@ -7,14 +7,13 @@ class MenuBase(BaseModel):
     description: Optional[str] = Field(None, description="메뉴 설명")
     price: float = Field(..., gt=0, description="메뉴 가격")
     category: str = Field(..., description="메뉴 카테고리 (예: 커피, 디저트)")
-    # image_url: Optional[str] = Field(None, description="메뉴 이미지 URL")  # 추후 이미지 기능 구현 예정
+    is_available: bool = Field(True, description="메뉴 가용 여부")
 
 class SimpleMenuCreate(BaseModel):
     """필수 필드만 포함된 간소화된 메뉴 생성 스키마"""
     name: str = Field(..., description="메뉴 이름")
     price: float = Field(..., gt=0, description="메뉴 가격")
     category: str = Field(..., description="메뉴 카테고리 (예: 커피, 디저트)")
-    # image_url: Optional[str] = Field(None, description="메뉴 이미지 URL")  # 추후 이미지 기능 구현 예정
 
 class MenuCreate(MenuBase):
     pass
@@ -24,7 +23,7 @@ class MenuUpdate(MenuBase):
     description: Optional[str] = None
     price: Optional[float] = Field(None, gt=0)
     category: Optional[str] = None
-    # image_url: Optional[str] = None  # 추후 이미지 기능 구현 예정
+    is_available: Optional[bool] = None
     is_active: Optional[bool] = None
 
 class MenuInDBBase(MenuBase):
@@ -35,7 +34,6 @@ class MenuInDBBase(MenuBase):
     updated_by: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    # image_url: Optional[str] = None  # 추후 이미지 기능 구현 예정
 
     class Config:
         from_attributes = True
@@ -44,4 +42,10 @@ class Menu(MenuInDBBase):
     pass
 
 class MenuInDB(MenuInDBBase):
-    pass 
+    pass
+
+class MenuResponse(MenuBase):
+    id: int
+
+    class Config:
+        from_attributes = True 

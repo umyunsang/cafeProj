@@ -1,8 +1,8 @@
-"""initial tables
+"""Initial migration
 
-Revision ID: b53d2bf32f5e
+Revision ID: 6d2ad5b7cc1b
 Revises: 
-Create Date: 2025-04-05 20:58:05.576304
+Create Date: 2025-04-06 19:26:32.378759
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b53d2bf32f5e'
+revision: str = '6d2ad5b7cc1b'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -37,6 +37,8 @@ def upgrade() -> None:
     sa.Column('price', sa.Float(), nullable=False),
     sa.Column('category', sa.String(), nullable=False),
     sa.Column('order_count', sa.Integer(), nullable=True),
+    sa.Column('is_available', sa.Boolean(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
@@ -46,6 +48,16 @@ def upgrade() -> None:
     op.create_index(op.f('ix_menus_category'), 'menus', ['category'], unique=False)
     op.create_index(op.f('ix_menus_id'), 'menus', ['id'], unique=False)
     op.create_index(op.f('ix_menus_name'), 'menus', ['name'], unique=False)
+    op.create_table('payment_configs',
+    sa.Column('provider', sa.String(), nullable=False),
+    sa.Column('client_id', sa.String(), nullable=True),
+    sa.Column('client_secret', sa.String(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.PrimaryKeyConstraint('provider')
+    )
+    op.create_index(op.f('ix_payment_configs_provider'), 'payment_configs', ['provider'], unique=False)
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(), nullable=True),
@@ -83,7 +95,11 @@ def upgrade() -> None:
     sa.Column('total_amount', sa.Float(), nullable=True),
     sa.Column('status', sa.String(), nullable=True),
     sa.Column('payment_method', sa.String(), nullable=True),
-    sa.Column('items', sa.JSON(), nullable=False),
+    sa.Column('session_id', sa.String(), nullable=True),
+    sa.Column('delivery_address', sa.String(), nullable=True),
+    sa.Column('delivery_request', sa.String(), nullable=True),
+    sa.Column('phone_number', sa.String(), nullable=True),
+    sa.Column('items', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
@@ -119,6 +135,8 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
+    op.drop_index(op.f('ix_payment_configs_provider'), table_name='payment_configs')
+    op.drop_table('payment_configs')
     op.drop_index(op.f('ix_menus_name'), table_name='menus')
     op.drop_index(op.f('ix_menus_id'), table_name='menus')
     op.drop_index(op.f('ix_menus_category'), table_name='menus')

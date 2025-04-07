@@ -110,4 +110,44 @@ class CRUDOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
             "total_amount": total_amount
         }
 
+def create_order(db: Session, order_data: OrderCreate, order_number: str) -> Order:
+    """새로운 주문 생성"""
+    db_order = Order(
+        order_number=order_number,
+        status="pending",
+        total_amount=0  # 초기값은 0으로 설정
+    )
+    db.add(db_order)
+    db.flush()  # ID 생성을 위해 flush
+
+    total_amount = 0
+    for item in order_data.items:
+        order_item = OrderItem(
+            order_id=db_order.id,
+            menu_id=item.menu_id,
+            quantity=item.quantity,
+            unit_price=item.unit_price,
+            total_price=item.unit_price * item.quantity
+        )
+        total_amount += order_item.total_price
+        db.add(order_item)
+
+    db_order.total_amount = total_amount
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+def get_order_by_number(db: Session, order_number: str) -> Optional[Order]:
+    """주문번호로 주문 조회"""
+    return db.query(Order).filter(Order.order_number == order_number).first()
+
+def update_order_status(db: Session, order_id: int, status: str) -> Optional[Order]:
+    """주문 상태 업데이트"""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if order:
+        order.status = status
+        db.commit()
+        db.refresh(order)
+    return order
+
 order = CRUDOrder(Order) 
