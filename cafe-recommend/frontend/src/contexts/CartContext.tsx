@@ -24,8 +24,8 @@ interface CartItem {
   id: number;
   menu_id: number;
   quantity: number;
-  name: string;
-  price: number;
+  special_requests?: string;
+  menu: Menu;
 }
 
 interface Cart {
@@ -227,28 +227,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       setError(null);
-      const sessionId = getSessionId();
+      const currentSessionId = getSessionId();
+      
+      if (!currentSessionId) {
+        throw new Error('세션 ID가 없습니다.');
+      }
 
       const response = await fetch('http://116.124.191.174:15026/api/cart', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'X-Session-ID': sessionId
+          'X-Session-ID': currentSessionId
         },
         credentials: 'include'
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ detail: '알 수 없는 오류가 발생했습니다.' }));
         throw new Error(errorData.detail || '장바구니를 비우는데 실패했습니다.');
       }
 
       const data = await response.json();
-      console.log('장바구니 비우기 결과:', data);
       setCart(data);
+      console.log('장바구니 비우기 성공:', data);
+      
     } catch (err) {
       console.error('장바구니 비우기 오류:', err);
       setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+      throw err;
     } finally {
       setIsLoading(false);
     }

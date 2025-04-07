@@ -3,6 +3,7 @@
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { ShoppingBag, MessageCircle, Coffee, CreditCard } from 'lucide-react';
 
 const container = {
   hidden: { opacity: 0 },
@@ -69,17 +70,41 @@ export default function HomePage() {
           {/* 사용 방법 섹션 */}
           <motion.section variants={item}>
             <h2 className="text-3xl font-bold mb-6 text-center gradient-text">이용 방법</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="glassmorphism p-6 neon-glow border border-primary/10">
-                <h3 className="text-xl font-semibold mb-3">1. AI와 대화하기</h3>
+                <div className="flex items-center mb-3">
+                  <MessageCircle className="h-6 w-6 text-primary mr-2" />
+                  <h3 className="text-xl font-semibold">1. AI 상담</h3>
+                </div>
                 <p className="text-text-light/70 dark:text-text-dark/70">
-                  AI 상담사와 자연스러운 대화를 나누며 취향을 파악합니다
+                  AI 상담사와 대화하며 취향을 분석하고 맞춤 메뉴를 추천받으세요
                 </p>
               </Card>
               <Card className="glassmorphism p-6 neon-glow border border-primary/10">
-                <h3 className="text-xl font-semibold mb-3">2. 맞춤 추천 받기</h3>
+                <div className="flex items-center mb-3">
+                  <Coffee className="h-6 w-6 text-primary mr-2" />
+                  <h3 className="text-xl font-semibold">2. 메뉴 선택</h3>
+                </div>
                 <p className="text-text-light/70 dark:text-text-dark/70">
-                  대화를 바탕으로 AI가 최적의 메뉴를 추천해드립니다
+                  추천받은 메뉴나 전체 메뉴에서 원하는 음료를 선택하세요
+                </p>
+              </Card>
+              <Card className="glassmorphism p-6 neon-glow border border-primary/10">
+                <div className="flex items-center mb-3">
+                  <ShoppingBag className="h-6 w-6 text-primary mr-2" />
+                  <h3 className="text-xl font-semibold">3. 장바구니</h3>
+                </div>
+                <p className="text-text-light/70 dark:text-text-dark/70">
+                  선택한 메뉴를 장바구니에 담고 주문 내역을 확인하세요
+                </p>
+              </Card>
+              <Card className="glassmorphism p-6 neon-glow border border-primary/10">
+                <div className="flex items-center mb-3">
+                  <CreditCard className="h-6 w-6 text-primary mr-2" />
+                  <h3 className="text-xl font-semibold">4. 결제</h3>
+                </div>
+                <p className="text-text-light/70 dark:text-text-dark/70">
+                  카카오페이로 간편하게 결제하고 주문을 완료하세요
                 </p>
               </Card>
             </div>

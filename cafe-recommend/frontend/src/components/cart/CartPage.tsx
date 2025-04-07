@@ -9,9 +9,9 @@ import { useCart } from '@/contexts/CartContext';
 
 export default function CartPage() {
   const router = useRouter();
-  const { items, updateQuantity, removeItem, error, loading } = useCart();
+  const { items, updateCartItem, removeFromCart, error, isLoading } = useCart();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
@@ -34,7 +34,7 @@ export default function CartPage() {
   const calculateSubtotal = () => {
     if (!items) return 0;
     return items.reduce((total, item) => {
-      const priceWithoutTax = Math.round(item.price / 1.1); // 세금 제외 가격
+      const priceWithoutTax = Math.round((item.menu.price || 0) / 1.1);
       return total + (priceWithoutTax * item.quantity);
     }, 0);
   };
@@ -56,7 +56,7 @@ export default function CartPage() {
         <div className="space-y-4">
           {items.map((item) => (
             <motion.div
-              key={item.menu_id}
+              key={item.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -66,10 +66,10 @@ export default function CartPage() {
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      {item.name}
+                      {item.menu.name}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {Math.round(item.price / 1.1).toLocaleString()}원 x {item.quantity} = {(Math.round(item.price / 1.1) * item.quantity).toLocaleString()}원
+                      {Math.round(item.menu.price / 1.1).toLocaleString()}원 x {item.quantity} = {(Math.round(item.menu.price / 1.1) * item.quantity).toLocaleString()}원
                     </p>
                   </div>
                   <div className="flex items-center space-x-4">
@@ -77,7 +77,7 @@ export default function CartPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateQuantity(item.menu_id, item.quantity - 1)}
+                        onClick={() => updateCartItem(item.id, item.quantity - 1)}
                         disabled={item.quantity <= 1}
                       >
                         -
@@ -88,7 +88,7 @@ export default function CartPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateQuantity(item.menu_id, item.quantity + 1)}
+                        onClick={() => updateCartItem(item.id, item.quantity + 1)}
                       >
                         +
                       </Button>
@@ -96,7 +96,7 @@ export default function CartPage() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => removeItem(item.menu_id)}
+                      onClick={() => removeFromCart(item.id)}
                     >
                       삭제
                     </Button>

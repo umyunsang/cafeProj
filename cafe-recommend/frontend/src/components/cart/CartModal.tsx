@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/card';
 
 export function CartModal() {
   const router = useRouter();
-  const { items, isOpen, closeCart, updateQuantity, removeItem, error, loading } = useCart();
+  const { items, isOpen, closeCart, updateCartItem, removeItem, error, loading } = useCart();
   const modalRef = useRef<HTMLDivElement>(null);
 
   // ESC 키로 모달 닫기
@@ -110,7 +110,7 @@ export function CartModal() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => updateQuantity(item.menu_id, item.quantity - 1)}
+                              onClick={() => updateCartItem(item.id, item.quantity - 1)}
                               disabled={item.quantity <= 1}
                             >
                               -
@@ -120,7 +120,7 @@ export function CartModal() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => updateQuantity(item.menu_id, item.quantity + 1)}
+                              onClick={() => updateCartItem(item.id, item.quantity + 1)}
                             >
                               +
                             </Button>
@@ -129,7 +129,7 @@ export function CartModal() {
                             variant="destructive"
                             size="icon"
                             className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white"
-                            onClick={() => removeItem(item.menu_id)}
+                            onClick={() => removeItem(item.id)}
                             aria-label="항목 삭제"
                           >
                             <X className="h-4 w-4" />

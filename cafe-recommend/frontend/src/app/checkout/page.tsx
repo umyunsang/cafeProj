@@ -9,36 +9,26 @@ import { NaverPayIcon, KakaoPayIcon } from '@/components/payment/PaymentIcons';
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 
-interface CartItem {
-  id: number;
-  menu_id: number;
-  quantity: number;
-  menu: {
-    id: number;
-    name: string;
-    price: number;
-  };
-}
-
 export default function CheckoutPage() {
   const { items, sessionId } = useCart();
-  const [selectedPayment, setSelectedPayment] = useState<string>('kakao');
+  const [selectedPayment, setSelectedPayment] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    if (!items || items.length === 0) {
-      router.push('/menu');
-    }
-  }, [items, router]);
-
-  useEffect(() => {
-    setSelectedPayment('kakao');
+    const timer = setTimeout(() => {
+      setSelectedPayment('kakao');
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const calculateTotal = () => {
     if (!items) return 0;
-    return items.reduce((total, item) => total + (item.menu.price * item.quantity), 0);
+    return items.reduce((total, item) => {
+      const price = typeof item.menu?.price === 'number' ? item.menu.price : 0;
+      const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+      return total + (price * quantity);
+    }, 0);
   };
 
   const handlePayment = async () => {
@@ -70,7 +60,7 @@ export default function CheckoutPage() {
           name: item.menu.name,
           quantity: item.quantity,
           unit_price: item.menu.price,
-          total_price: item.menu.price * item.quantity
+          total_price: (item.menu?.price || 0) * item.quantity
         }))
       };
       console.log('주문 요청 데이터:', orderRequestData);
@@ -88,7 +78,16 @@ export default function CheckoutPage() {
       if (!orderResponse.ok) {
         const errorData = await orderResponse.json();
         console.error('주문 생성 실패:', errorData);
-        throw new Error(errorData.detail || '주문 생성에 실패했습니다.');
+        let errorMessage = '주문 생성에 실패했습니다.';
+        if (errorData.detail && Array.isArray(errorData.detail)) {
+          // Format validation errors
+          errorMessage = errorData.detail
+            .map((err: any) => `${err.loc.join('.')} : ${err.msg}`)
+            .join('; ');
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        }
+        throw new Error(errorMessage);
       }
 
       const orderResponseData = await orderResponse.json();
@@ -122,11 +121,15 @@ export default function CheckoutPage() {
       }
 
       const paymentData = await paymentResponse.json();
+      console.log('결제 응답 데이터:', paymentData);
       
+      // 카카오페이 API 응답 형식에 따라 리디렉션 URL 처리
       if (paymentData.next_redirect_pc_url) {
+        // 카카오페이 API 응답 형식 그대로 사용
         window.location.href = paymentData.next_redirect_pc_url;
       } else {
-        router.push('/order/complete');
+        console.error('결제 시작 실패 또는 리디렉션 URL 없음:', paymentData);
+        toast.error('결제 준비 중 오류가 발생했습니다.');
       }
     } catch (error) {
       console.error('결제 처리 중 오류:', error);
@@ -157,7 +160,10 @@ export default function CheckoutPage() {
                   onChange={(e) => setSelectedPayment(e.target.value)}
                   className="form-radio"
                 />
-                <label htmlFor="kakao">카카오페이</label>
+                <label htmlFor="kakao" className="flex items-center space-x-2">
+                  <KakaoPayIcon />
+                  <span>카카오페이</span>
+                </label>
               </div>
             </div>
             <div className="mt-6">

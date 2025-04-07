@@ -14,7 +14,7 @@ interface Menu {
   category: string;
 }
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = 'http://116.124.191.174:15026/api';
 
 const fetcher = async (url: string) => {
   try {
