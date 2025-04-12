@@ -88,4 +88,10 @@ class OrderResponse(BaseModel):
     items: List[OrderItemResponse]
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class KakaoPayCompleteRequest(BaseModel):
+    """카카오페이 결제 완료 요청 스키마"""
+    pg_token: str
+    order_id: str # 주문 ID는 문자열로 받을 수 있음 (프론트에서 stringify 함)
+    tid: str 

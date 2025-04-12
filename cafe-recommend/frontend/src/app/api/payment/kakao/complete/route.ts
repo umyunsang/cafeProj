@@ -6,14 +6,21 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const sessionId = request.headers.get('X-Session-ID');
+    const { tid, pg_token, order_id } = body;
 
-    const response = await fetch(`${API_BASE_URL}/api/payment/kakao/complete`, {
+    const queryParams = new URLSearchParams({
+      tid: tid,
+      pg_token: pg_token,
+      order_id: order_id,
+    }).toString();
+    const fetchURL = `${API_BASE_URL}/api/payment/kakao/complete?${queryParams}`;
+
+    const response = await fetch(fetchURL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Session-ID': sessionId || '',
       },
-      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

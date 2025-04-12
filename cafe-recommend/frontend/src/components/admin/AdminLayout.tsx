@@ -9,7 +9,8 @@ import {
   ShoppingCart,
   LogOut,
   Menu as MenuIcon,
-  X
+  X,
+  LayoutDashboard
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -42,8 +43,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }

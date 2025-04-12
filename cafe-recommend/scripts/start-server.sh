@@ -17,16 +17,41 @@ fi
 # 로그 디렉토리 생성
 mkdir -p "$PROJECT_ROOT/logs"
 
-# 포트 사용 여부 확인
-check_port() {
+# 포트 사용 중인 프로세스 강제 종료 함수 (개선)
+kill_port() {
     local port=$1
     local name=$2
-    if lsof -i :$port > /dev/null; then
-        echo -e "${RED}오류: 포트 $port가 이미 사용 중입니다.${NC}"
-        echo -e "${YELLOW}다음 명령어로 확인해보세요: lsof -i :$port${NC}"
-        return 1
+    local pids
+
+    echo -e "${YELLOW}포트 $port($name) 정리 시도...${NC}"
+    
+    # lsof 사용
+    pids=$(lsof -ti :$port)
+    if [ -n "$pids" ]; then
+        echo -e "${YELLOW}lsof: 포트 $port 사용 중인 프로세스 발견 (PIDs: $pids). 강제 종료 시도...${NC}"
+        echo "$pids" | xargs kill -9 2>/dev/null
     fi
-    return 0
+
+    # fuser 사용 (fuser가 설치되어 있을 경우)
+    if command -v fuser &> /dev/null; then
+        pids=$(fuser -n tcp $port 2>/dev/null | xargs)
+        if [ -n "$pids" ]; then
+            echo -e "${YELLOW}fuser: 포트 $port 사용 중인 프로세스 발견 (PIDs: $pids). 강제 종료 시도...${NC}"
+            fuser -k -n tcp $port 2>/dev/null
+        fi
+    else
+        echo -e "${YELLOW}fuser 명령어를 찾을 수 없습니다. lsof 결과만 사용합니다.${NC}"
+    fi
+    
+    sleep 2 # 종료 시간 확보 (기존 1초에서 2초로 늘림)
+    
+    # 최종 확인
+    if lsof -i :$port > /dev/null; then
+        echo -e "${RED}오류: 포트 $port 프로세스 종료 실패. 스크립트를 중단합니다.${NC}"
+        lsof -i :$port # 어떤 프로세스가 여전히 살아있는지 보여줌
+        exit 1
+    fi
+    echo -e "${GREEN}포트 $port 정리 완료.${NC}"
 }
 
 # 프로세스 상태 확인
@@ -54,15 +79,11 @@ cleanup_old_pid() {
     fi
 }
 
-# 백엔드 포트 확인
-if ! check_port 15026 "백엔드"; then
-    exit 1
-fi
+# 백엔드 포트 강제 정리
+kill_port 15026 "백엔드"
 
-# 프론트엔드 포트 확인
-if ! check_port 15022 "프론트엔드"; then
-    exit 1
-fi
+# 프론트엔드 포트 강제 정리
+kill_port 15022 "프론트엔드"
 
 # 이전 PID 파일 정리
 cleanup_old_pid "$PROJECT_ROOT/logs/backend.pid"
@@ -103,7 +124,17 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
+# 시작 전 관련 node 프로세스 추가 종료 시도
+echo -e "${YELLOW}기존 프론트엔드 관련 node 프로세스 종료 시도 (pkill)...${NC}"
+pkill -f "node.*next dev.*15022" 2>/dev/null
+pkill -f "npm run dev.*15022" 2>/dev/null
+sleep 1
+
+# 프론트엔드 포트 최종 확인 및 정리 (한번 더)
+kill_port 15022 "프론트엔드 (시작 직전)"
+
 # 프론트엔드 서버 실행 (백그라운드)
+echo -e "${YELLOW}nohup npm run dev 실행...${NC}"
 nohup npm run dev -- -p 15022 > "$PROJECT_ROOT/logs/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 echo $FRONTEND_PID > "$PROJECT_ROOT/logs/frontend.pid"

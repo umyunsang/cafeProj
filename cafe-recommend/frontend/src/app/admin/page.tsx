@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { Coffee, Lock } from 'lucide-react';
+import { toast, Toaster } from 'sonner';
+import { Coffee, Lock, Mail } from 'lucide-react';
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -71,50 +71,57 @@ export default function AdminLogin() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100 p-4">
-      <Card className="w-full max-w-md p-8 space-y-6 bg-white shadow-lg">
-        <div className="text-center space-y-2">
-          <div className="flex justify-center">
-            <Coffee className="h-12 w-12 text-amber-600" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800 p-4">
+      <Toaster position="top-center" richColors />
+      <Card className="w-full max-w-md p-8 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg shadow-xl rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="text-center space-y-3">
+          <div className="inline-block p-3 bg-primary/10 dark:bg-primary/20 rounded-full">
+            <Coffee className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">관리자 로그인</h1>
-          <p className="text-gray-500">카페 관리 시스템에 오신 것을 환영합니다</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">관리자 로그인</h1>
+          <p className="text-gray-600 dark:text-gray-400">카페 관리 시스템에 오신 것을 환영합니다</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">이메일</label>
+            <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">이메일</label>
             <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+              </span>
               <Input
+                id="email"
                 type="email"
                 placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="pl-10"
+                className="pl-10 pr-3 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:ring-primary/40 dark:focus:border-primary outline-none transition duration-200"
               />
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">비밀번호</label>
+            <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">비밀번호</label>
             <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <Lock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+              </span>
               <Input
+                id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="pl-10"
+                className="pl-10 pr-3 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:ring-primary/40 dark:focus:border-primary outline-none transition duration-200"
               />
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             </div>
           </div>
 
           <Button
             type="submit"
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50 disabled:opacity-70"
             disabled={isLoading}
           >
             {isLoading ? '로그인 중...' : '로그인'}

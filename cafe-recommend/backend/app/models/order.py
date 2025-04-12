@@ -30,6 +30,7 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True, index=True)
+    order_number = Column(String, unique=True, index=True, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 비회원 주문 허용
     total_amount = Column(Float, default=0.0)
     status = Column(String, default="pending")  # pending, paid, completed, cancelled
@@ -43,8 +44,8 @@ class Order(Base):
     # 주문 상세 정보 (JSON 형식으로 저장)
     items = Column(String, nullable=True)  # JSON 형식의 주문 아이템 목록
     
-    # 주문 시간
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # 주문 시간 (created_at에 인덱스 추가)
+    created_at = Column(DateTime(timezone=True), index=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # 관계 설정

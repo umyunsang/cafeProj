@@ -94,7 +94,8 @@ class Settings(BaseSettings):
 
     # 카카오페이 설정
     KAKAO_PAY_API_URL: str = "https://kapi.kakao.com"
-    KAKAO_ADMIN_KEY: str = "d6f8cf9ed125ce95eaca902cc2af20e7"
+    KAKAO_ADMIN_KEY: str = os.getenv("KAKAO_ADMIN_KEY", "d6f8cf9ed125ce95eaca902cc2af20e7")
+    KAKAO_CID: str = os.getenv("KAKAO_CID", "TC0ONETIME")
 
     # 프론트엔드 URL
     FRONTEND_URL: str = "http://116.124.191.174:15022"

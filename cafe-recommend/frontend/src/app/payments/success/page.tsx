@@ -6,9 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
-import { format, addHours } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { CheckCircle, ShoppingBag, Clock } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 
 // 백엔드 OrderResponse 스키마와 일치하도록 인터페이스 업데이트
 interface OrderItemResponse {
@@ -45,23 +44,6 @@ export default function PaymentSuccessPage() {
   const [cartCleared, setCartCleared] = useState(false);
   const [localSessionId, setLocalSessionId] = useState<string | null>(null);
 
-  // UTC 시간을 KST(한국 시간)로 변환하는 함수
-  const formatToKST = (dateString: string | null) => {
-    if (!dateString) return '날짜 정보 없음';
-    
-    try {
-      // UTC 시간을 Date 객체로 변환
-      const date = new Date(dateString);
-      // UTC 시간에 9시간을 더해 KST로 변환
-      const kstDate = addHours(date, 9);
-      // 한국 로케일로 포맷팅
-      return format(kstDate, 'PPP p', { locale: ko });
-    } catch (error) {
-      console.error('날짜 변환 오류:', error);
-      return dateString;
-    }
-  };
-
   // 로컬 스토리지에서 세션 ID 가져오기
   useEffect(() => {
     const storedSessionId = localStorage.getItem('sessionId');
@@ -77,7 +59,17 @@ export default function PaymentSuccessPage() {
         const params = new URLSearchParams(window.location.search);
         const pg_token = params.get('pg_token');
         const order_id = params.get('order_id');
-        const tid = params.get('tid');
+        // const tid = params.get('tid'); // URL 파라미터 대신 sessionStorage에서 가져오기
+        
+        // sessionStorage에서 tid 가져오기
+        const tid = sessionStorage.getItem('kakaoPaymentTid');
+        console.log('sessionStorage에서 TID 로드:', tid);
+
+        // 사용 후 tid 제거
+        if (tid) {
+          sessionStorage.removeItem('kakaoPaymentTid');
+          console.log('sessionStorage에서 TID 제거됨');
+        }
         
         if (!order_id) {
           setError('주문 정보를 찾을 수 없습니다.');
@@ -119,28 +111,36 @@ export default function PaymentSuccessPage() {
               console.error('결제 완료 처리 실패:', errorData);
               throw new Error(errorData.error || '결제 완료 처리에 실패했습니다.');
             }
-          }
+            
+            // 결제 완료 API 응답에서 직접 주문 정보 가져오기
+            const completeData = await completeResponse.json();
+            if (!completeData || !completeData.order) {
+              console.error('결제 완료 응답에서 주문 정보를 찾을 수 없습니다.', completeData);
+              throw new Error('결제 완료 응답 형식이 올바르지 않습니다.');
+            }
+            console.log('결제 완료 API 응답 주문 정보:', completeData.order);
+            setOrder(completeData.order); // 응답받은 주문 정보로 상태 업데이트
 
-          // 2. 주문 정보 조회 (새로운 엔드포인트 사용)
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // API 엔드포인트를 /api/orders/{order_id}로 변경
-          const orderResponse = await fetch(`/api/orders/${order_id}`, {
-            headers: {
-              'X-Session-ID': effectiveSessionId
-            },
-            credentials: 'include'
-          });
-          
-          if (!orderResponse.ok) {
-            const errorData = await orderResponse.json();
-            console.error('주문 정보 조회 실패:', errorData);
-            throw new Error('주문 정보를 조회할 수 없습니다.');
+          } else {
+            // tid나 pg_token이 없는 경우 (카카오페이 외 다른 결제 또는 직접 접근)
+            // 주문 정보만 조회
+            const orderResponse = await fetch(`/api/orders/${order_id}`, {
+              headers: {
+                'X-Session-ID': effectiveSessionId
+              },
+              credentials: 'include'
+            });
+            
+            if (!orderResponse.ok) {
+              const errorData = await orderResponse.json();
+              console.error('주문 정보 조회 실패:', errorData);
+              throw new Error('주문 정보를 조회할 수 없습니다.');
+            }
+            
+            const orderData: OrderResponse = await orderResponse.json();
+            console.log('주문 정보 (직접 조회):', orderData);
+            setOrder(orderData);
           }
-          
-          const orderData: OrderResponse = await orderResponse.json(); // OrderResponse 타입 명시
-          console.log('주문 정보:', orderData);
-          setOrder(orderData);
           
           // 3. 장바구니 비우기 (한 번만 실행)
           if (!cartCleared) {
@@ -231,7 +231,7 @@ export default function PaymentSuccessPage() {
                   <Clock className="h-4 w-4 mr-1 text-gray-500" />
                   <p className="text-sm font-medium">주문일시</p>
                 </div>
-                <p className="text-sm">{formatToKST(order.created_at)}</p>
+                <p className="text-sm">{formatDate(order.created_at)}</p>
               </div>
             </div>
             

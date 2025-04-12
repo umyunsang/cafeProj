@@ -13,14 +13,19 @@ export default function CheckoutPage() {
   const { items, sessionId } = useCart();
   const [selectedPayment, setSelectedPayment] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSelectedPayment('kakao');
-    }, 0);
-    return () => clearTimeout(timer);
+    setIsClient(true);
   }, []);
+
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     setSelectedPayment('kakao');
+  //   }, 0);
+  //   return () => clearTimeout(timer);
+  // }, []); // Hydration 오류를 유발할 수 있으므로 주석 처리
 
   const calculateTotal = () => {
     if (!items) return 0;
@@ -121,7 +126,19 @@ export default function CheckoutPage() {
       }
 
       const paymentData = await paymentResponse.json();
-      console.log('결제 응답 데이터:', paymentData);
+      // Log the raw payment data received from the API
+      console.log('결제 API Raw 응답 데이터:', JSON.stringify(paymentData)); 
+
+      console.log('결제 응답 데이터 (parsed):', paymentData);
+
+      // 카카오페이 tid를 sessionStorage에 저장
+      console.log('TID 저장 조건 확인:', { selectedPayment, hasTid: paymentData && paymentData.hasOwnProperty('tid'), tidValue: paymentData?.tid });
+      if (selectedPayment === 'kakao' && paymentData.tid) { 
+        sessionStorage.setItem('kakaoPaymentTid', paymentData.tid);
+        console.log('카카오페이 TID 저장됨:', paymentData.tid);
+      } else {
+        console.log('카카오페이 TID 저장 조건 실패 또는 TID 없음');
+      }
       
       // 카카오페이 API 응답 형식에 따라 리디렉션 URL 처리
       if (paymentData.next_redirect_pc_url) {
@@ -149,23 +166,27 @@ export default function CheckoutPage() {
         <div>
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">결제 방법 선택</h2>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="kakao"
-                  name="payment"
-                  value="kakao"
-                  checked={selectedPayment === 'kakao'}
-                  onChange={(e) => setSelectedPayment(e.target.value)}
-                  className="form-radio"
-                />
-                <label htmlFor="kakao" className="flex items-center space-x-2">
-                  <KakaoPayIcon />
-                  <span>카카오페이</span>
-                </label>
+            {isClient ? (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="kakao"
+                    name="payment"
+                    value="kakao"
+                    checked={selectedPayment === 'kakao'}
+                    onChange={(e) => setSelectedPayment(e.target.value)}
+                    className="form-radio"
+                  />
+                  <label htmlFor="kakao" className="flex items-center space-x-2">
+                    <KakaoPayIcon />
+                    <span>카카오페이</span>
+                  </label>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="h-10"></div>
+            )}
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-2">결제 금액</h3>
               <p className="text-2xl font-bold">{calculateTotal().toLocaleString()}원</p>
@@ -173,7 +194,7 @@ export default function CheckoutPage() {
             <Button
               className="w-full mt-6"
               onClick={handlePayment}
-              disabled={isProcessing}
+              disabled={isProcessing || !isClient}
             >
               {isProcessing ? '처리 중...' : '결제하기'}
             </Button>

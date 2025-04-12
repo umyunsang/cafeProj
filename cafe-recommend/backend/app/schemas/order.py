@@ -57,13 +57,13 @@ class OrderItemStatusUpdate(BaseModel):
 class AdminOrderItemResponse(BaseModel):
     id: int
     order_id: int
-    menu_id: int
+    menu_id: Optional[int] = None
     menu_name: str
     quantity: int
     unit_price: float
     total_price: float
     status: Optional[str] = "pending"  # pending, completed
-    created_at: datetime
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
