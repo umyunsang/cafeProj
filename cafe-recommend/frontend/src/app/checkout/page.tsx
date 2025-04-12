@@ -141,12 +141,30 @@ export default function CheckoutPage() {
       }
       
       // 카카오페이 API 응답 형식에 따라 리디렉션 URL 처리
-      if (paymentData.next_redirect_pc_url) {
-        // 카카오페이 API 응답 형식 그대로 사용
-        window.location.href = paymentData.next_redirect_pc_url;
+      if (selectedPayment === 'kakao' && paymentData) {
+        // 사용자 환경 감지 (Mobile/PC)
+        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+        
+        if (isMobile && paymentData.next_redirect_mobile_url) {
+          console.log('모바일 환경 감지. 모바일 리다이렉션 URL 사용:', paymentData.next_redirect_mobile_url);
+          window.location.href = paymentData.next_redirect_mobile_url;
+        } else if (paymentData.next_redirect_pc_url) {
+          console.log('PC 환경 또는 모바일 URL 없음. PC 리다이렉션 URL 사용:', paymentData.next_redirect_pc_url);
+          window.location.href = paymentData.next_redirect_pc_url;
+        } else {
+          console.error('결제 시작 실패: 유효한 리디렉션 URL이 없습니다.', paymentData);
+          toast.error('결제 준비 중 오류가 발생했습니다. (리디렉션 URL 없음)');
+        }
       } else {
-        console.error('결제 시작 실패 또는 리디렉션 URL 없음:', paymentData);
-        toast.error('결제 준비 중 오류가 발생했습니다.');
+        // 카카오페이 외 다른 결제 수단 또는 paymentData가 없는 경우 (기존 로직 유지 또는 확장 필요 시 추가)
+        // 현재는 카카오페이만 고려하므로, 이 부분은 이론상 도달하지 않거나 다른 결제 처리 로직이 필요할 수 있음
+        // 예시: 다른 결제 방식 처리
+        if (paymentData && paymentData.next_redirect_pc_url) { // 우선 PC URL 기준으로 처리
+           window.location.href = paymentData.next_redirect_pc_url;
+        } else {
+           console.error('결제 시작 실패 또는 리디렉션 URL 없음 (카카오 외):', paymentData);
+           toast.error('결제 준비 중 오류가 발생했습니다.');
+        }
       }
     } catch (error) {
       console.error('결제 처리 중 오류:', error);
