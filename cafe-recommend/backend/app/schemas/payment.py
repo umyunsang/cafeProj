@@ -12,10 +12,7 @@ class NaverPayResponse(BaseModel):
 
 class OrderItemRequest(BaseModel):
     menu_id: int
-    name: str
     quantity: int
-    unit_price: float
-    total_price: float
 
 class OrderRequest(BaseModel):
     payment_method: str  # 'kakao' 또는 'naver'
@@ -74,6 +71,7 @@ class OrderItemResponse(BaseModel):
 # 주문 응답 스키마
 class OrderResponse(BaseModel):
     id: int
+    order_number: Optional[str] = None
     user_id: Optional[int] = None
     total_amount: float
     status: str

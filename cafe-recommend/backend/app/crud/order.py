@@ -1,5 +1,9 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
+from sqlalchemy import func, desc
+from datetime import date, datetime
+import pytz
+import json
 
 from app.crud.base import CRUDBase
 from app.models.order import Order, OrderItem
@@ -110,32 +114,73 @@ class CRUDOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
             "total_amount": total_amount
         }
 
-def create_order(db: Session, order_data: OrderCreate, order_number: str) -> Order:
-    """새로운 주문 생성"""
+def create_order(db: Session, order_data: OrderCreate) -> Order:
+    """새로운 주문 생성 (주문번호는 결제 완료 시 생성)"""
+    
+    # KST 시간대 생성
+    kst = pytz.timezone('Asia/Seoul')
+    now_kst = datetime.now(kst)
+    
+    # 5. Order 객체 생성 (order_number=None 으로 설정)
     db_order = Order(
-        order_number=order_number,
+        order_number=None, # 주문번호는 결제 완료 시 생성
         status="pending",
-        total_amount=0  # 초기값은 0으로 설정
+        payment_method=order_data.payment_method,
+        session_id=order_data.session_id, 
+        user_id=getattr(order_data, 'user_id', None),
+        delivery_address=getattr(order_data, 'delivery_address', None),
+        delivery_request=getattr(order_data, 'delivery_request', None),
+        phone_number=getattr(order_data, 'phone_number', None),
+        created_at=now_kst
+        # total_amount 와 items 는 아래에서 처리
     )
     db.add(db_order)
     db.flush()  # ID 생성을 위해 flush
 
     total_amount = 0
+    order_items_data_for_json = [] # JSON 저장을 위한 데이터
     for item in order_data.items:
+        menu_item = db.query(Menu).filter(Menu.id == item.menu_id).first()
+        if not menu_item:
+            # 메뉴 못 찾으면 롤백하고 에러 발생
+            db.rollback()
+            raise ValueError(f"Menu item with id {item.menu_id} not found") 
+            
+        unit_price = item.unit_price if item.unit_price is not None else menu_item.price
+        item_total = unit_price * item.quantity
+        
+        # OrderItem 객체 생성 및 추가
         order_item = OrderItem(
             order_id=db_order.id,
             menu_id=item.menu_id,
             quantity=item.quantity,
-            unit_price=item.unit_price,
-            total_price=item.unit_price * item.quantity
+            unit_price=unit_price,
+            total_price=item_total
         )
-        total_amount += order_item.total_price
         db.add(order_item)
+        total_amount += item_total
+        
+        # JSON 저장용 데이터 구성
+        order_items_data_for_json.append({
+             "menu_id": item.menu_id,
+             "menu_name": menu_item.name,
+             "quantity": item.quantity,
+             "unit_price": unit_price,
+             "total_price": item_total
+        })
 
+    # Order 객체에 계산된 총액과 JSON 아이템 목록 업데이트
     db_order.total_amount = total_amount
-    db.commit()
-    db.refresh(db_order)
-    return db_order
+    db_order.items = json.dumps(order_items_data_for_json, ensure_ascii=False) # ensure_ascii=False 추가 (한글 처리)
+    
+    try:
+        db.commit()
+        db.refresh(db_order)
+        return db_order
+    except Exception as e:
+        db.rollback()
+        # DB 제약 조건 위반 등 커밋 시 오류 처리 (예: unique constraint)
+        raise ValueError(f"Failed to commit order: {str(e)}")
 
 def get_order_by_number(db: Session, order_number: str) -> Optional[Order]:
     """주문번호로 주문 조회"""

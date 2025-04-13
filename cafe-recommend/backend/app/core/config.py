@@ -88,9 +88,11 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     
     # 네이버페이 설정
-    NAVER_PAY_API_URL: str = "https://dev.apis.naver.com/naverpay-partner"
-    NAVER_CLIENT_ID: str = ""
-    NAVER_CLIENT_SECRET: str = ""
+    NAVER_PAY_API_URL: str = "https://dev-pub.apis.naver.com"
+    NAVER_PAY_PARTNER_ID: str | None = None
+    NAVER_PAY_CLIENT_ID: str | None = None
+    NAVER_PAY_CLIENT_SECRET: str | None = None
+    NAVER_PAY_CHAIN_ID: str | None = None
 
     # 카카오페이 설정
     KAKAO_PAY_API_URL: str = "https://kapi.kakao.com"

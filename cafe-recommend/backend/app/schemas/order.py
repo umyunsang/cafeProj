@@ -27,6 +27,11 @@ class OrderBase(BaseModel):
     user_id: Optional[int] = None
     status: str = "pending"  # pending, confirmed, completed, cancelled
     total_amount: float = 0.0
+    payment_method: Optional[str] = None
+    session_id: Optional[str] = None
+    delivery_address: Optional[str] = None
+    delivery_request: Optional[str] = None
+    phone_number: Optional[str] = None
 
 class OrderCreate(OrderBase):
     items: List[OrderItemCreate]

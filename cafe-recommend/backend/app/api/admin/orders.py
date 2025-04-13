@@ -9,6 +9,7 @@ from app.models.user import User
 import logging
 import httpx
 from app.core.config import settings
+from app.routers.payment import cancel_naver_payment, cancel_kakao_payment
 
 router = APIRouter()
 
@@ -99,7 +100,7 @@ async def get_all_orders(
             # 주문 정보를 AdminOrderResponse 형식으로 변환
             result.append(AdminOrderResponse(
                 id=order.id,
-                order_number=str(order.id),
+                order_number=order.order_number or str(order.id),
                 user_id=order.user_id,
                 total_amount=order.total_amount if order.total_amount is not None else 0.0,
                 status=order.status or "unknown",
@@ -161,7 +162,7 @@ async def get_order_by_id(
         # 주문 정보를 AdminOrderResponse 형식으로 변환
         return AdminOrderResponse(
             id=order.id,
-            order_number=str(order.id),
+            order_number=order.order_number or str(order.id),
             user_id=order.user_id,
             total_amount=order.total_amount,
             status=order.status,
@@ -194,7 +195,7 @@ async def update_order_item_status(
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
-    """주문 항목의 상태를 업데이트하고, 필요한 경우 카카오페이 취소를 처리합니다."""
+    """주문 항목의 상태를 업데이트하고, 필요한 경우 PG사 결제 취소를 처리합니다."""
     logging.info(f"--- 주문 항목 상태 업데이트 시작: Order ID={order_id}, Item ID={item_id}, New Status={status_update.status} ---")
     
     try:
@@ -218,63 +219,99 @@ async def update_order_item_status(
         # 이미 처리된 상태면 변경하지 않음
         if order_item.status == status_update.status:
              logging.warning(f"주문 항목 {item_id}은(는) 이미 {status_update.status} 상태입니다. 업데이트 건너뜀.")
-             # 현재 상태 그대로 반환
              return await get_order_by_id(order_id, db, current_admin)
 
-        # 2. 상태가 'cancelled' 인 경우 카카오페이 환불 로직 추가
-        kakaopay_cancelled = False
+        # 2. 상태가 'cancelled' 인 경우 PG사 환불 로직 추가/수정
+        pg_cancelled = False # PG사 취소 성공 여부 플래그
+        original_item_status = order_item.status # 상태 변경 전 원래 상태 저장
+        
         if status_update.status == 'cancelled':
-            logging.info(f"취소 요청 확인됨. 카카오페이 환불 조건 검사 시작.")
-            # 3. 환불 조건 확인
-            # !! 중요: order.status 조건을 시스템의 실제 결제 완료 상태에 맞게 조정해야 할 수 있습니다. !!
+            logging.info(f"취소 요청 확인됨. PG사 환불 조건 검사 시작.")
+
+            # 3. 카카오페이 환불 조건 및 처리 (기존 로직)
             is_kakaopay = order.payment_method == 'kakao'
-            has_tid = bool(order.payment_key) # TID 존재 여부
-            is_paid = order.status in ['completed', 'paid'] # 'paid' 등 다른 완료 상태 포함 가능성 고려
-            is_item_pending = order_item.status == 'pending'
+            has_tid = bool(order.payment_key)
+            is_paid = order.status in ['paid'] # 'paid' 상태일 때만 취소 가능하도록 명확히 함
+            is_item_pending = original_item_status == 'pending' # 원래 상태가 pending 이었는지 확인
             
-            logging.debug(f"환불 조건 검사 결과: is_kakaopay={is_kakaopay}, has_tid={has_tid}, is_paid={is_paid} (Order Status: {order.status}), is_item_pending={is_item_pending} (Item Status: {order_item.status})")
+            logging.debug(f"환불 조건 검사 결과: is_kakaopay={is_kakaopay}, has_tid={has_tid}, is_paid={is_paid} (Order Status: {order.status}), is_item_pending={is_item_pending} (Original Item Status: {original_item_status})")
             
             can_cancel_kakaopay = is_kakaopay and has_tid and is_paid and is_item_pending
 
             if can_cancel_kakaopay:
                 logging.info(f"카카오페이 취소 조건 충족: Order ID={order_id}, Item ID={item_id}, TID={order.payment_key}")
                 try:
-                    # 4. 취소 금액 계산 (비과세 금액은 0으로 가정)
-                    # !! 중요: total_price가 아닌 unit_price * quantity 로 계산하는 것이 더 정확할 수 있습니다. !!
-                    # cancel_amount = int((order_item.unit_price or 0) * (order_item.quantity or 0))
-                    cancel_amount = int(order_item.total_price or 0) # 현재는 total_price 사용
-                    cancel_tax_free_amount = 0
+                    cancel_amount = int(order_item.total_price or 0) 
+                    cancel_tax_free_amount = 0 
                     logging.debug(f"취소 금액 계산: cancel_amount={cancel_amount}, cancel_tax_free_amount={cancel_tax_free_amount}")
                     
                     if cancel_amount <= 0:
                         logging.warning(f"취소 금액이 0 이하입니다 (Item ID: {item_id}). 카카오페이 취소를 진행하지 않습니다.")
                     else:
-                        # 5. 카카오페이 취소 API 호출
                         logging.info(f"카카오페이 취소 API 호출 시작: TID={order.payment_key}")
                         await call_kakaopay_cancel_api(
-                            tid=order.payment_key, # None이 아님을 위에서 확인
+                            tid=order.payment_key,
                             cancel_amount=cancel_amount,
                             cancel_tax_free_amount=cancel_tax_free_amount
                         )
-                        kakaopay_cancelled = True
+                        pg_cancelled = True 
                         logging.info(f"카카오페이 취소 API 호출 성공 (Item ID: {item_id})")
 
                 except HTTPException as http_exc:
                     logging.error(f"카카오페이 취소 API 호출 실패 (HTTPException): {http_exc.detail}")
-                    raise http_exc 
+                    # 카카오 취소 실패 시, 아이템 상태 롤백은 하지 않고 에러 전파 (관리자가 인지해야 함)
+                    raise http_exc
                 except Exception as e:
                     logging.exception(f"카카오페이 취소 처리 중 예상치 못한 오류 (Item ID: {item_id})")
                     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="카카오페이 취소 처리 중 오류가 발생했습니다.")
-            else:
-                logging.info(f"카카오페이 취소 조건 미충족 또는 불필요 (Item ID: {item_id}). DB 상태만 업데이트합니다.")
+            
+            # ****** 네이버페이 환불 로직 추가 시작 ******
+            elif order.payment_method == 'naver':
+                has_payment_key = bool(order.payment_key) 
+                is_paid = order.status in ['paid'] # 'paid' 상태 확인
+                is_item_pending = original_item_status == 'pending'
+
+                logging.debug(f"네이버페이 취소 조건 검사: has_payment_key={has_payment_key}, is_paid={is_paid} (Order Status: {order.status}), is_item_pending={is_item_pending} (Original Item Status: {original_item_status})")
+
+                can_cancel_naverpay = has_payment_key and is_paid and is_item_pending
+
+                if can_cancel_naverpay:
+                    logging.info(f"네이버페이 취소 조건 충족: Order ID={order_id}, Item ID={item_id}, PaymentKey={order.payment_key}")
+                    try:
+                        logging.info(f"네이버페이 취소 API 호출 시작: PaymentKey={order.payment_key}")
+                        await cancel_naver_payment(order_id=order.id, db=db) # payment.py 함수 호출
+                        pg_cancelled = True 
+                        logging.info(f"네이버페이 취소 API 호출 시도 완료 (Item ID: {item_id}). 세부 결과는 cancel_naver_payment 로그 확인.")
+                    except HTTPException as http_exc:
+                        logging.error(f"네이버페이 취소 API 호출 실패 (HTTPException): {http_exc.detail}")
+                        # 네이버 취소 실패 시, 아이템 상태 롤백은 하지 않고 에러 전파
+                        raise http_exc
+                    except Exception as e:
+                        logging.exception(f"네이버페이 취소 처리 중 예상치 못한 오류 (Item ID: {item_id})")
+                        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="네이버페이 취소 처리 중 오류가 발생했습니다.")
+                else:
+                     logging.info(f"네이버페이 취소 조건 미충족 또는 불필요 (Item ID: {item_id}). DB 상태만 업데이트합니다.")
+            # ****** 네이버페이 환불 로직 추가 끝 ******
+
+            else: 
+                 logging.info(f"PG사({order.payment_method}) 취소 로직 미구현 또는 불필요. DB 상태만 업데이트합니다.")
 
         # 6. 데이터베이스 상태 업데이트
         logging.debug(f"데이터베이스 상태 업데이트 시도: Item ID={item_id}, New Status={status_update.status}")
         order_item.status = status_update.status
+        
+        # 모든 아이템이 취소되었는지 확인 (PG 취소 성공 여부와 관계없이)
+        all_items_cancelled = all(item.status == 'cancelled' for item in order.order_items)
+        
+        # 만약 모든 아이템이 cancelled 상태이고, 주문 상태가 아직 cancelled가 아니라면 주문 전체 상태도 업데이트
+        if all_items_cancelled and order.status != 'CANCELLED':
+             logging.info(f"모든 아이템이 취소되어 주문 {order.id} 상태를 CANCELLED로 변경합니다.")
+             order.status = 'CANCELLED' # 상수 또는 Enum 사용 권장
+
         db.commit()
         db.refresh(order_item)
-        db.refresh(order)
-        logging.info(f"주문 항목 상태 DB 업데이트 성공: Item ID={item_id}, New Status={status_update.status}, Kakaopay Cancelled={kakaopay_cancelled}")
+        db.refresh(order) 
+        logging.info(f"주문 항목 상태 DB 업데이트 성공: Item ID={item_id}, New Status={status_update.status}, PG Cancelled={pg_cancelled}")
 
         # 7. 업데이트된 주문 정보 반환
         logging.debug(f"업데이트된 주문 정보 반환 시작: Order ID={order_id}")
@@ -283,11 +320,9 @@ async def update_order_item_status(
         return updated_order
 
     except HTTPException as http_exc:
-        # 예상된 HTTP 예외 처리
         logging.warning(f"HTTP 예외 발생: {http_exc.status_code} - {http_exc.detail}")
         raise http_exc
     except Exception as e:
-        # 예상치 못한 전체 예외 처리
         logging.exception(f"주문 항목 상태 업데이트 중 최상위 오류 발생 (Order ID: {order_id}, Item ID: {item_id})", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
