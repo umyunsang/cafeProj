@@ -12,4 +12,8 @@ export const CONFIG = {
   theme: {
     defaultTheme: 'system' as const,
   },
+  naver: {
+    clientId: process.env.NEXT_PUBLIC_NAVER_PAY_CLIENT_ID || 'HN3GGCMDdTgGUfl0kFCo',
+    chainId: process.env.NEXT_PUBLIC_NAVER_PAY_CHAIN_ID || 'c1l0UTFCMlNwNjY',
+  },
 } as const; 

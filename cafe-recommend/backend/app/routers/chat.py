@@ -159,17 +159,17 @@ def chat(message: ChatMessage, db: Session = Depends(get_db)):
         try:
             # ChatGPT API 호출 (대화용)
             chat_completion = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4",
                 messages=[
                     {"role": "system", "content": CHAT_SYSTEM_PROMPT.format(
                         menu_list=format_menu_for_prompt(menus)
                     )},
                     *chat_histories[message.session_id][-5:]  # 최근 5개의 대화만 포함
                 ],
-                temperature=0.7,
-                max_tokens=50,
-                presence_penalty=0.6,
-                frequency_penalty=0.3
+                temperature=0.5,
+                max_tokens=100,
+                presence_penalty=0.5,
+                frequency_penalty=0.2
             )
             
             # AI 응답 추출 및 저장

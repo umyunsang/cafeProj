@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { CONFIG } from "@/config";
 import { CartProvider } from '@/contexts/CartContext';
@@ -8,8 +8,69 @@ import { CartModal } from '@/components/cart/CartModal';
 import { CartButton } from '@/components/cart/CartButton';
 import { Toaster } from 'sonner';
 
+declare global {
+  interface Window {
+    Naver?: any;
+    naverPayInstance?: any;
+  }
+}
+
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const naverPaySdkUrl = 'https://nsp.pay.naver.com/sdk/js/naverpay.min.js';
+
+    if (document.querySelector(`script[src="${naverPaySdkUrl}"]`)) {
+      if (window.naverPayInstance) {
+        console.log('Naver Pay SDK 이미 로드 및 초기화됨.');
+        return;
+      }
+      console.log('Naver Pay SDK 스크립트는 로드됨. 초기화 재시도...');
+    }
+
+    const initializeNaverPay = () => {
+      if (window.Naver && window.Naver.Pay) {
+        console.log(`Naver Pay SDK create 시도 (clientId: ${CONFIG.naver.clientId}, chainId: ${CONFIG.naver.chainId}, mode: development)`);
+        try {
+          window.naverPayInstance = window.Naver.Pay.create({
+            mode: 'development',
+            clientId: CONFIG.naver.clientId,
+            chainId: CONFIG.naver.chainId,
+          });
+          console.log('Naver Pay SDK 객체 생성 완료 (window.naverPayInstance):', window.naverPayInstance);
+        } catch (createError) {
+          console.error('Naver Pay SDK create 중 오류:', createError);
+        }
+      } else {
+        console.error('Naver Pay SDK 초기화 실패: window.Naver.Pay 객체를 찾을 수 없음.');
+      }
+    };
+
+    if (document.querySelector(`script[src="${naverPaySdkUrl}"]`)) {
+      initializeNaverPay();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = naverPaySdkUrl;
+    script.async = true;
+    script.onload = initializeNaverPay;
+    script.onerror = () => {
+      console.error('Naver Pay SDK 로드 실패.');
+    };
+
+    document.body.appendChild(script);
+    console.log('Naver Pay SDK 로드 시작...');
+
+    return () => {
+      const existingScript = document.querySelector(`script[src="${naverPaySdkUrl}"]`);
+      if (existingScript) {
+        document.body.removeChild(existingScript);
+        console.log('Naver Pay SDK 스크립트 제거됨.');
+      }
+    };
+  }, []);
 
   return (
     <CartProvider>

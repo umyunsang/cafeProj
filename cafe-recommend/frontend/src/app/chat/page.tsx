@@ -21,7 +21,7 @@ interface RecommendedMenu {
 
 const INITIAL_MESSAGE: ChatMessage = {
   role: 'assistant',
-  content: '안녕하세요! 저는 카페 AI 상담사입니다. 음료나 디저트에 대해 궁금한 점을 물어보세요.'
+  content: '안녕하세요! 저는 카페 AI 챗봇입니다. 고객님의 취향에 맞는 완벽한 음료나 디저트를 추천해드릴게요. 무엇을 찾고 계신가요?'
 };
 
 export default function ChatPage() {
@@ -112,7 +112,7 @@ export default function ChatPage() {
     <div className="container mx-auto p-4">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
-          <h1 className="text-2xl font-bold mb-4">AI 카페 상담사와 대화하기</h1>
+          <h1 className="text-2xl font-bold mb-4">AI 카페 챗봇 대화하기</h1>
           <Card className="p-4">
             <div ref={scrollAreaRef}>
               <ScrollArea className="h-[500px] mb-4 p-4">
