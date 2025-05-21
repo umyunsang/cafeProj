@@ -1,11 +1,11 @@
 from app.database import SessionLocal
-from app.models.payment import PaymentConfig
+from app.models.payment_settings import PaymentSettings
 
 def init_payment_config():
     db = SessionLocal()
     try:
         # 카카오페이 설정 추가
-        kakao_config = PaymentConfig(
+        kakao_config = PaymentSettings(
             provider='kakao',
             client_id='d6f8cf9ed125ce95eaca902cc2af20e7',
             client_secret='',
@@ -14,7 +14,7 @@ def init_payment_config():
         db.add(kakao_config)
         
         # 네이버페이 설정 추가
-        naver_config = PaymentConfig(
+        naver_config = PaymentSettings(
             provider='naver',
             client_id='',
             client_secret='',
