@@ -13,12 +13,15 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
         """새 사용자 생성"""
+        is_admin = getattr(obj_in, "is_admin", False)
+        is_superuser = getattr(obj_in, "is_superuser", is_admin)
+        
         db_obj = User(
             email=obj_in.email,
             hashed_password=get_password_hash(obj_in.password),
             name=obj_in.name,
             preferences=obj_in.preferences,
-            is_admin=obj_in.is_admin,
+            is_superuser=is_superuser,
             is_active=obj_in.is_active,
             taste_preference=obj_in.taste_preference
         )
@@ -39,6 +42,10 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             update_data["hashed_password"] = get_password_hash(update_data["password"])
             del update_data["password"]
         
+        # is_admin 처리 (하위 호환성)
+        if "is_admin" in update_data and "is_superuser" not in update_data:
+            update_data["is_superuser"] = update_data["is_admin"]
+        
         return super().update(db, db_obj=db_obj, obj_in=update_data)
 
     def authenticate(self, db: Session, *, email: str, password: str) -> Optional[User]:
@@ -55,6 +62,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return user.is_active
 
     def is_admin(self, user: User) -> bool:
-        return user.is_admin
+        """관리자 권한 확인 (하위 호환성 유지)"""
+        return user.is_superuser
 
 user = CRUDUser(User) 

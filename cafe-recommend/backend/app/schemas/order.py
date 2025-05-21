@@ -1,78 +1,106 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
-from .menu import Menu
+
 
 class OrderItemBase(BaseModel):
     menu_id: int
-    quantity: int = Field(gt=0)
-    unit_price: Optional[float] = None
-    total_price: Optional[float] = None
-    menu_name: Optional[str] = None
+    quantity: int
+
 
 class OrderItemCreate(OrderItemBase):
-    pass
+    unit_price: Optional[float] = None
 
-class OrderItem(OrderItemBase):
+
+class OrderItemUpdate(OrderItemBase):
+    menu_id: Optional[int] = None
+    quantity: Optional[int] = None
+    status: Optional[str] = None
+
+
+class OrderItemInDB(OrderItemBase):
     id: int
     order_id: int
+    unit_price: float
+    total_price: float
+    status: str = "pending"
     created_at: datetime
     updated_at: Optional[datetime] = None
-    status: Optional[str] = "pending"  # pending, completed
 
     class Config:
-        from_attributes = True
+        orm_mode = True
+
+
+class OrderItem(OrderItemInDB):
+    menu_name: Optional[str] = None
+
 
 class OrderBase(BaseModel):
-    user_id: Optional[int] = None
-    status: str = "pending"  # pending, confirmed, completed, cancelled
-    total_amount: float = 0.0
     payment_method: Optional[str] = None
     session_id: Optional[str] = None
     delivery_address: Optional[str] = None
     delivery_request: Optional[str] = None
     phone_number: Optional[str] = None
+    total_amount: Optional[float] = None
+
 
 class OrderCreate(OrderBase):
     items: List[OrderItemCreate]
+    user_id: Optional[int] = None
 
-class OrderUpdate(BaseModel):
-    status: str
 
-class OrderResponse(OrderBase):
+class OrderUpdate(OrderBase):
+    status: Optional[str] = None
+    payment_key: Optional[str] = None
+    is_refunded: Optional[bool] = None
+    refund_amount: Optional[float] = None
+    refund_reason: Optional[str] = None
+    refund_id: Optional[str] = None
+    refunded_at: Optional[datetime] = None
+
+
+class OrderInDB(OrderBase):
     id: int
     order_number: Optional[str] = None
+    user_id: Optional[int] = None
+    total_amount: float
+    status: str = "pending"
+    payment_key: Optional[str] = None
+    items: Optional[str] = None  # JSON 문자열
     created_at: datetime
     updated_at: Optional[datetime] = None
-    items: List[Dict[str, Any]]
-    payment_method: Optional[str] = None
-    payment_key: Optional[str] = None
-    session_id: Optional[str] = None
-    delivery_address: Optional[str] = None
-    delivery_request: Optional[str] = None
-    phone_number: Optional[str] = None
+    is_refunded: bool = False
+    refund_amount: Optional[float] = None
+    refund_reason: Optional[str] = None
+    refund_id: Optional[str] = None
+    refunded_at: Optional[datetime] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# 관리자용 주문 스키마
-class OrderItemStatusUpdate(BaseModel):
-    status: str
 
+class Order(OrderInDB):
+    pass
+
+
+class OrderWithItems(Order):
+    order_items: List[OrderItem] = []
+
+
+# 관리자 API용 응답 모델
 class AdminOrderItemResponse(BaseModel):
     id: int
-    order_id: int
-    menu_id: Optional[int] = None
+    menu_id: int
     menu_name: str
     quantity: int
     unit_price: float
     total_price: float
-    status: Optional[str] = "pending"  # pending, completed
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    status: str
+    created_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
+
 
 class AdminOrderResponse(BaseModel):
     id: int
@@ -81,37 +109,16 @@ class AdminOrderResponse(BaseModel):
     total_amount: float
     status: str
     payment_method: Optional[str] = None
-    payment_key: Optional[str] = None
-    session_id: Optional[str] = None
-    delivery_address: Optional[str] = None
-    delivery_request: Optional[str] = None
-    phone_number: Optional[str] = None
     created_at: datetime
-    updated_at: Optional[datetime] = None
     items: List[AdminOrderItemResponse]
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# 장바구니 스키마
-class CartItemBase(BaseModel):
-    menu_id: int
-    quantity: int
 
-class CartItemCreate(CartItemBase):
-    pass
+class OrderItemStatusUpdate(BaseModel):
+    status: str
 
-class CartItem(CartItemBase):
-    unit_price: float
-    total_price: float
-    menu_name: str
 
-    class Config:
-        from_attributes = True
-
-class Cart(BaseModel):
-    items: List[CartItem]
-    total_amount: float
-
-    class Config:
-        from_attributes = True 
+class OrderStatusUpdate(BaseModel):
+    status: str 

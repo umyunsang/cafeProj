@@ -18,6 +18,9 @@ interface RecommendedMenu {
   matchScore: number;
 }
 
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://116.124.191.174:15049';
+
 export default function RecommendPage() {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendedMenu[]>([]);
@@ -29,7 +32,7 @@ export default function RecommendPage() {
 
   const fetchChatHistory = async () => {
     try {
-      const response = await fetch('http://116.124.191.174:15026/chat/history');
+      const response = await fetch(`${API_BASE_URL}/chat/history`);
       const data = await response.json();
       setChatHistory(data.history);
     } catch (error) {
@@ -40,7 +43,7 @@ export default function RecommendPage() {
   const getRecommendations = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://116.124.191.174:15026/recommend/from-chat', {
+      const response = await fetch(`${API_BASE_URL}/recommend/from-chat`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -57,7 +60,7 @@ export default function RecommendPage() {
 
   const addToCart = async (menuId: number) => {
     try {
-      await fetch('http://116.124.191.174:15026/cart', {
+      await fetch(`${API_BASE_URL}/cart`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

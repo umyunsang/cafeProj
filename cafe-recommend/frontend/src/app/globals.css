@@ -4,52 +4,617 @@
 
 @layer base {
   :root {
-    --border: #E0E0E0;
-    --primary: #4A90E2;
-    --accent: #E63946;
-    --secondary: #F4A261;
-    --neon: #9b5de5;
+    /* Neutral Colors (Grayscale) */
+    --neutral-50: #FAFAFA;
+    --neutral-100: #F5F5F5;
+    --neutral-200: #EEEEEE;
+    --neutral-300: #E0E0E0;
+    --neutral-400: #BDBDBD;
+    --neutral-500: #9E9E9E;
+    --neutral-600: #757575;
+    --neutral-700: #616161;
+    --neutral-800: #424242;
+    --neutral-900: #212121;
+    --neutral-950: #121212;
+
+    /* Primary Colors */
+    --primary-50: #E7F0FA;
+    --primary-100: #CFE2F3;
+    --primary-200: #A7C9E8;
+    --primary-300: #7FB0DD;
+    --primary-400: #5797D2;
+    --primary-500: #2F7EC7;
+    --primary-600: #0A67C7;
+    --primary-700: #095AB4;
+    --primary-800: #074D9C;
+    --primary-900: #063E85;
+    --primary-foreground: var(--neutral-50);
+
+    /* Secondary Colors */
+    --secondary-50: #FEF5EB;
+    --secondary-100: #FCE8D4;
+    --secondary-200: #F9D5A9;
+    --secondary-300: #F6C27E;
+    --secondary-400: #F3B053;
+    --secondary-500: #F09D28;
+    --secondary-600: #D67D1F;
+    --secondary-700: #C06F1C;
+    --secondary-800: #A96118;
+    --secondary-900: #935314;
+    --secondary-foreground: var(--neutral-50);
+
+    /* Accent Colors */
+    --accent-50: #FDE9EA;
+    --accent-100: #FAD1D4;
+    --accent-200: #F5AAB0;
+    --accent-300: #F0838B;
+    --accent-400: #EB5B66;
+    --accent-500: #E63441;
+    --accent-600: #C42332;
+    --accent-700: #B01F2C;
+    --accent-800: #9C1B26;
+    --accent-900: #881720;
+    --accent-foreground: var(--neutral-50);
+    
+    /* Other fixed colors */
+    --neon: #7800AB;
+    --white: #FFFFFF;
+    --black: #000000;
+
+    /* Semantic Colors (Light Theme) */
+    --background: var(--neutral-50);
+    --foreground: var(--neutral-900);
+    --card: var(--white);
+    --card-foreground: var(--neutral-900);
+    --popover: var(--white);
+    --popover-foreground: var(--neutral-900);
+    --primary-color: var(--primary-600);
+    --primary-color-foreground: var(--primary-foreground);
+    --secondary-color: var(--secondary-600);
+    --secondary-color-foreground: var(--secondary-foreground);
+    --accent-color: var(--accent-600);
+    --accent-color-foreground: var(--accent-foreground);
+    --destructive: var(--accent-700);
+    --destructive-foreground: var(--accent-foreground);
+    --border-color: var(--neutral-300); /* 기존 --border 대신 사용 */
+    --input-border: var(--neutral-400);
+    --ring: var(--primary-500);
+
+    --radius: 0.5rem;
+
+    /* 접근성 개선을 위한 변수 추가 */
+    --text-high-contrast: var(--neutral-950);
+    --text-high-contrast-light: var(--neutral-50);
+    --focus-ring: var(--primary-500); /* rgba 투명도 제거 */
+    --focus-outline: 3px;
+
+    /* 반응형 간격 변수 */
+    --content-padding-xxs: 0.5rem;   /* 320px 이하 초소형 화면 */
+    --content-padding-xs: 0.75rem;   /* 480px 이하 소형 화면 */
+    --content-padding-sm: 1rem;      /* 640px 이하 */
+    --content-padding-md: 1.5rem;    /* 768px 이하 */
+    --content-padding-lg: 2rem;      /* 1024px 이하 */
+    --content-padding-xl: 2.5rem;    /* 1280px 이상 */
+
+    /* 반응형 폰트 사이즈 변수 */
+    --font-size-xxs: 0.75rem;        /* 12px */
+    --font-size-xs: 0.875rem;        /* 14px */
+    --font-size-sm: 1rem;            /* 16px */
+    --font-size-md: 1.125rem;        /* 18px */
+    --font-size-lg: 1.25rem;         /* 20px */
+    --font-size-xl: 1.5rem;          /* 24px */
+    --font-size-2xl: 1.75rem;        /* 28px */
+    --font-size-3xl: 2rem;           /* 32px */
+    --font-size-4xl: 2.5rem;         /* 40px */
+    
+    /* 반응형 공간 변수 */
+    --space-xxs: 0.25rem;            /* 4px */
+    --space-xs: 0.5rem;              /* 8px */
+    --space-sm: 0.75rem;             /* 12px */
+    --space-md: 1rem;                /* 16px */
+    --space-lg: 1.5rem;              /* 24px */
+    --space-xl: 2rem;                /* 32px */
+    --space-2xl: 3rem;               /* 48px */
+    --space-3xl: 4rem;               /* 64px */
   }
 
   .dark {
-    --border: #333333;
-    --primary: #4A90E2;
-    --accent: #E63946;
-    --secondary: #F4A261;
-    --neon: #9b5de5;
+    /* Semantic Colors (Dark Theme) */
+    --background: var(--neutral-950);
+    --foreground: var(--neutral-200);
+    --card: var(--neutral-900);
+    --card-foreground: var(--neutral-200);
+    --popover: var(--neutral-900);
+    --popover-foreground: var(--neutral-200);
+    /* Primary, Secondary, Accent 는 라이트와 동일하게 유지하거나, 필요시 재정의. 여기서는 라이트 테마의 것을 그대로 상속받도록 함. */
+    /* 예시: --primary-color: var(--primary-400); */
+    /* --primary-color-foreground: var(--neutral-900); */
+    --border-color: var(--neutral-700); /* 기존 --border 대신 사용 */
+    --input-border: var(--neutral-600);
+    --ring: var(--primary-400);
+
+    /* 기존 접근성, 반응형 변수들 (다크모드에 맞게 재정의된 부분만) ... */
+    --text-high-contrast: var(--neutral-50);
+    --text-high-contrast-light: var(--neutral-950);
+    --focus-ring: var(--primary-400); /* rgba 투명도 제거 */
+    /* --focus-outline: 3px; 라이트와 동일하므로 재선언 불필요 */
+    /* --border, --primary 등 단일 값 변수들은 .dark 스코프에서 재정의 되었었음. 이제 새로운 시스템을 따름 */
   }
 }
 
 @layer base {
   * {
-    @apply border-[color:var(--border)];
+    @apply border-[color:var(--border-color)];
   }
   
   body {
-    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 ease-in-out;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* 접근성 향상을 위한 포커스 스타일 */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-offset-2 ring-[var(--ring)]; /* ring-opacity 제거 */
+  }
+  
+  /* 스크린 리더를 위한 클래스 */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+  }
+
+  /* 반응형 폰트 사이즈 - 개선된 세밀한 스케일링 */
+  h1 {
+    @apply text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold leading-tight tracking-tight;
+    font-size: clamp(1.75rem, 5vw, 3rem);
+  }
+  
+  h2 {
+    @apply text-xl xs:text-2xl sm:text-3xl md:text-4xl font-bold leading-tight tracking-tight;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+  }
+  
+  h3 {
+    @apply text-lg xs:text-xl sm:text-2xl md:text-3xl font-semibold leading-tight;
+    font-size: clamp(1.25rem, 3vw, 2rem);
+  }
+  
+  h4 {
+    @apply text-base xs:text-lg sm:text-xl md:text-2xl font-semibold leading-tight;
+    font-size: clamp(1.125rem, 2.5vw, 1.75rem);
+  }
+  
+  p, li, a, button, input, select, textarea {
+    @apply text-base xs:text-base sm:text-lg leading-relaxed;
+    font-size: clamp(0.875rem, 2vw, 1.125rem);
   }
 }
 
 @layer utilities {
   .glassmorphism {
-    @apply backdrop-blur-sm bg-white/10 dark:bg-black/10 border border-white/20 dark:border-white/10;
+    /* backdrop-blur-sm은 유지하되, 배경과 테두리 투명도 제거 */
+    @apply backdrop-blur-sm bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700;
   }
 
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[var(--primary-color)] to-[var(--accent-color)];
   }
 
   .gradient-border {
-    @apply border-2 border-transparent bg-gradient-to-r from-primary to-accent bg-clip-border;
+    @apply border-2 border-transparent bg-gradient-to-r from-[var(--primary-color)] to-[var(--accent-color)] bg-clip-border;
   }
 
   .neon-glow {
-    @apply relative;
+    /* 투명도 /70 제거 */
+    @apply shadow-[0_0_15px_theme(colors.primary.DEFAULT),_0_0_30px_theme(colors.primary.DEFAULT)];
   }
 
-  .neon-glow::before {
-    content: '';
-    @apply absolute inset-0 -z-10 blur-xl bg-gradient-to-r from-neon to-accent opacity-50;
+  .preferred-gradient-bg {
+    @apply bg-gradient-to-br from-blue-600 via-sky-700 to-orange-400 dark:from-blue-700 dark:via-sky-800 dark:to-amber-500;
+  }
+
+  .preferred-gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-sky-300 to-orange-300;
+  }
+
+  /* 접근성 향상 유틸리티 */
+  .text-high-contrast {
+    color: var(--text-high-contrast);
+  }
+  
+  .text-high-contrast-light {
+    color: var(--text-high-contrast-light);
+  }
+  
+  .focus-visible-improved {
+    @apply outline-none transition-all duration-150;
+  }
+  
+  .focus-visible-improved:focus-visible {
+    /* box-shadow에서 var(--focus-ring) 사용 시 이제 불투명한 색상 */
+    @apply ring-2 ring-offset-2 ring-[var(--ring)]; 
+    box-shadow: 0 0 0 var(--focus-outline) var(--focus-ring);
+  }
+  
+  /* 접근성 향상 배경 클래스 */
+  .bg-high-contrast {
+    background-color: var(--text-high-contrast);
+    color: var(--text-high-contrast-light);
+  }
+  
+  .bg-high-contrast-light {
+    background-color: var(--text-high-contrast-light);
+    color: var(--text-high-contrast);
+  }
+
+  /* 반응형 레이아웃 유틸리티 - 개선된 버전 */
+  .responsive-container {
+    @apply w-full max-w-full mx-auto;
+    padding-left: clamp(var(--content-padding-xxs), 3vw, var(--content-padding-xl));
+    padding-right: clamp(var(--content-padding-xxs), 3vw, var(--content-padding-xl));
+  }
+
+  .responsive-grid {
+    @apply grid gap-4 xs:gap-5 md:gap-6;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  }
+  
+  .responsive-flex {
+    @apply flex flex-col xs:flex-row flex-wrap gap-4 xs:gap-5 md:gap-6;
+  }
+
+  /* 모바일 친화적 터치 타겟 - 개선된 크기 */
+  .touch-target {
+    @apply min-h-[48px] min-w-[48px] flex items-center justify-center;
+  }
+
+  /* 모바일 화면에서 스크롤 가능한 컨테이너 */
+  .scroll-container-x {
+    @apply overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 pb-2;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding: 1rem;
+    scrollbar-width: thin;
+  }
+  
+  /* 새로운 반응형 유틸리티 */
+  .responsive-padding {
+    padding: clamp(var(--space-xs), 2vw, var(--space-xl));
+  }
+  
+  .responsive-margin {
+    margin: clamp(var(--space-xs), 2vw, var(--space-xl));
+  }
+  
+  .responsive-gap {
+    gap: clamp(var(--space-xs), 2vw, var(--space-lg));
+  }
+  
+  /* 새로운 타이포그래피 유틸리티 */
+  .fluid-text-sm {
+    font-size: clamp(var(--font-size-xxs), 1.5vw, var(--font-size-sm));
+  }
+  
+  .fluid-text-base {
+    font-size: clamp(var(--font-size-xs), 2vw, var(--font-size-md));
+  }
+  
+  .fluid-text-lg {
+    font-size: clamp(var(--font-size-sm), 2.5vw, var(--font-size-lg));
+  }
+  
+  .fluid-text-xl {
+    font-size: clamp(var(--font-size-md), 3vw, var(--font-size-xl));
+  }
+  
+  .fluid-text-2xl {
+    font-size: clamp(var(--font-size-lg), 3.5vw, var(--font-size-2xl));
+  }
+  
+  /* 화면 방향에 따른 최적화 스타일 */
+  @media (orientation: portrait) {
+    .portrait-only {
+      display: block;
+    }
+    
+    .landscape-only {
+      display: none;
+    }
+  }
+  
+  @media (orientation: landscape) {
+    .portrait-only {
+      display: none;
+    }
+    
+    .landscape-only {
+      display: block;
+    }
   }
 }
+
+/* 미디어 쿼리 섹션 - 확장 및 개선 */
+
+/* 초소형 화면 (320px 이하) */
+@media (max-width: 320px) {
+  .xxs-container {
+    @apply px-2 py-1;
+  }
+  
+  .xxs-stack > * + * {
+    margin-top: 0.5rem;
+  }
+  
+  .xxs-hide {
+    display: none !important;
+  }
+  
+  .xxs-show {
+    display: block !important;
+  }
+  
+  /* 버튼과 입력 필드 크기 최적화 */
+  button, .button, input[type="button"], input[type="submit"] {
+    @apply px-2 py-1 text-sm;
+    height: auto;
+    min-height: 40px;
+  }
+}
+
+/* 모바일 뷰 (640px 이하) */
+@media (max-width: 640px) {
+  .mobile-menu-container {
+    /* @apply fixed inset-0 bg-background overflow-y-auto p-4; */ /* 오류 발생 지점 */
+    position: fixed;
+    inset: 0;
+    background-color: var(--background); /* CSS 변수 직접 사용 */
+    overflow-y: auto;
+    padding: 1rem; /* p-4에 해당 */
+  }
+  
+  .mobile-menu-item {
+    @apply block w-full text-left p-3 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800;
+  }
+  
+  /* 간격 조정 */
+  .mobile-stack > * + * {
+    @apply mt-4; /* sm:mt-0 */
+  }
+  
+  /* 모바일 최적화 그리드 */
+  .mobile-grid {
+    @apply grid grid-cols-1 gap-4;
+  }
+  
+  /* 모바일에서 숨기기/보이기 */
+  .mobile-hide {
+    @apply hidden;
+  }
+  
+  .mobile-show {
+    @apply block;
+  }
+  
+  /* 모바일에서의 카드 레이아웃 */
+  .card, .glassmorphism {
+    /* @apply p-3; */ /* 너무 작을 수 있어 주석 처리, 필요시 활성화 */
+  }
+  
+  /* 모바일 폼 요소 개선 */
+  input, select, textarea {
+    @apply text-base;
+  }
+  
+  /* 터치 최적화 */
+  a, button, [role="button"] {
+    /* @apply touch-target; */ /* 너무 많은 요소에 적용될 수 있어 주석처리. 필요한 곳에 선택적 적용 */
+  }
+}
+
+/* 태블릿 화면에서의 스타일링 (641px-1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-specific {
+    @apply py-2 px-4;
+  }
+  
+  .tablet-grid {
+    @apply grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+    gap: 1.25rem;
+  }
+  
+  .tablet-hide {
+    display: none !important;
+  }
+  
+  .tablet-show {
+    display: block !important;
+  }
+  
+  /* 태블릿 레이아웃 개선 */
+  .container {
+    @apply px-6;
+  }
+  
+  /* 태블릿 최적화 네비게이션 */
+  nav {
+    @apply px-6;
+  }
+}
+
+/* 대형 화면 최적화 (1280px 이상) */
+@media (min-width: 1280px) {
+  .desktop-wide-layout {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .desktop-grid {
+    @apply grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+  
+  /* 대형 화면에서 여백 확대 */
+  .container {
+    @apply px-8;
+  }
+  
+  /* 대형 화면 타이포그래피 조정 */
+  h1 {
+    font-size: 3rem;
+  }
+  
+  h2 {
+    font-size: 2.5rem;
+  }
+}
+
+/* 인쇄 미디어를 위한 스타일링 */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  body {
+    font-size: 12pt;
+    line-height: 1.5;
+    color: black;
+    background: white;
+  }
+  
+  a {
+    text-decoration: underline;
+  }
+  
+  /* 인쇄시 배경 제거 */
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  /* 페이지 나누기 방지 */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+  
+  img {
+    page-break-inside: avoid;
+    max-width: 100% !important;
+  }
+  
+  table {
+    page-break-inside: avoid;
+  }
+  
+  ul, ol, dl {
+    page-break-before: avoid;
+  }
+}
+
+/* 접근성 관련 미디어 쿼리 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 고대비 모드 지원 */
+@media (prefers-contrast: high) {
+  :root {
+    /* Enhance contrast for high contrast mode */
+    /* ... other high contrast variables ... */
+  }
+  * {
+    /* Styles for high contrast mode */
+  }
+  a {
+    /* Link styles for high contrast */
+  }
+}
+
+/* Sonner Toast Customization */
+[data-sonner-toast] {
+  @apply !rounded-lg !border !shadow-lg !text-sm;
+  /* @apply !bg-popover !text-popover-foreground !border-border-color; */ /* 테마 변수 적용 시 */
+}
+
+/* title */
+[data-sonner-toast] [data-title] {
+  @apply !font-semibold;
+  /* color: var(--foreground); */
+}
+
+/* description */
+[data-sonner-toast] [data-description] {
+  /* color: var(--foreground); */
+  /* opacity: 0.8; 투명도 제거 */
+}
+.dark [data-sonner-toast] [data-description] {
+  /* color: var(--foreground); */
+  /* opacity: 0.7; 투명도 제거 */
+}
+
+[data-sonner-toast][data-type="success"] {
+  /* @apply !bg-green-50 !text-green-700 !border-green-200 dark:!bg-green-900/50 dark:!text-green-300 dark:!border-green-700; */
+}
+[data-sonner-toast][data-type="success"] svg {
+  /* @apply !text-green-600 dark:!text-green-400; */
+}
+
+[data-sonner-toast][data-type="error"] {
+  /* @apply !bg-red-50 !text-red-700 !border-red-200 dark:!bg-red-900/50 dark:!text-red-300 dark:!border-red-700; */
+}
+[data-sonner-toast][data-type="error"] svg {
+  /* @apply !text-red-600 dark:!text-red-400; */
+}
+
+[data-sonner-toast][data-type="warning"] {
+  /* @apply !bg-yellow-50 !text-yellow-700 !border-yellow-200 dark:!bg-yellow-900/50 dark:!text-yellow-300 dark:!border-yellow-700; */
+}
+[data-sonner-toast][data-type="warning"] svg {
+  /* @apply !text-yellow-600 dark:!text-yellow-400; */
+}
+
+[data-sonner-toast][data-type="info"] {
+  /* @apply !bg-blue-50 !text-blue-700 !border-blue-200 dark:!bg-blue-900/50 dark:!text-blue-300 dark:!border-blue-700; */
+}
+[data-sonner-toast][data-type="info"] svg {
+  /* @apply !text-blue-600 dark:!text-blue-400; */
+}
+
+[data-sonner-toast] [data-close-button] {
+  /* @apply !bg-transparent !border-none !text-muted-foreground !opacity-50 hover:!opacity-75; */
+  /* @apply dark:!text-neutral-400 dark:hover:!text-neutral-200; */
+}
+[data-sonner-toast] [data-close-button]:hover {
+  /* @apply !bg-accent/50; */
+}
+.dark [data-sonner-toast] [data-close-button]:hover {
+  /* @apply !bg-accent/30; */
+}
+
+
+[data-sonner-toast] [data-button] {
+  /* @apply !bg-primary !text-primary-foreground hover:!bg-primary/90 !border-none;
+  @apply !px-3 !py-1.5 !text-xs !font-medium !rounded-md; */
+}
+[data-sonner-toast] [data-button]:hover {
+  /* @apply !brightness-95; */
+}
+
+/* Ensure toast is above other elements, e.g., modals, if necessary */
+/* [data-sonner-toaster] {
+  z-index: 9999 !important; 
+} */

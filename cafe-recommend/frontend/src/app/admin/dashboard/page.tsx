@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -27,8 +26,16 @@ import {
 } from 'recharts';
 import RealtimeSalesWidget from '@/components/admin/RealtimeSalesWidget';
 import AdvancedMenuChart from '@/components/admin/charts/AdvancedMenuChart';
-import { OrderMetricsGrid } from '@/components/admin/charts/OrderMetricsCard';
-import { ArrowUpIcon, ArrowDownIcon, TrendingUpIcon, TrendingDownIcon } from 'lucide-react';
+import { OrderMetricsGrid, OrderMetricsGridData } from '@/components/admin/charts/OrderMetricsCard';
+import { TrendingUpIcon, TrendingDownIcon } from 'lucide-react';
+import { PopularMenuItemsChart } from '@/components/admin/charts/PopularMenuItemsChart';
+import { SalesSummaryCard, SalesSummaryData } from '@/components/admin/dashboard/SalesSummaryCard';
+import { OrderAnalyticsSummaryCard, OrderAnalyticsSummaryData } from '@/components/admin/dashboard/OrderAnalyticsSummaryCard';
+import { HourlyOrdersChart, HourlyOrderData } from '@/components/admin/charts/HourlyOrdersChart';
+import { PaymentMethodChart, PaymentMethodSaleData } from '@/components/admin/charts/PaymentMethodChart';
+import { CategorySalesChart, CategorySaleData } from '@/components/admin/charts/CategorySalesChart';
+import { DailyTrendChart, DailyTrendData } from '@/components/admin/charts/DailyTrendChart';
+import { MenuSalesItem } from '@/components/admin/charts/AdvancedMenuChart';
 
 // 색상 팔레트 정의
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28AFF', '#FF6B6B', '#4ECDC4'];
@@ -42,7 +49,7 @@ interface DashboardData {
   }[];
   recentOrders: {
     id: number;
-    items: string;
+    items: string | any[];
     total: number;
     status: string;
     date: string;
@@ -51,31 +58,13 @@ interface DashboardData {
     name: string;
     count: number;
   }[];
-  todaySummary: {
-    totalSales: number;
-    yesterdaySales: number;
-    growthRate: number;
-  };
+  todaySummary: SalesSummaryData;
 }
 
 interface OrderAnalytics {
-  menu_sales: {
-    id: number;
-    name: string;
-    category: string;
-    quantity: number;
-    total_sales: number;
-  }[];
-  hourly_orders: {
-    hour: number;
-    order_count: number;
-    total_amount: number;
-  }[];
-  payment_method_sales: {
-    method: string;
-    order_count: number;
-    total_amount: number;
-  }[];
+  menu_sales: MenuSalesItem[];
+  hourly_orders: HourlyOrderData[];
+  payment_method_sales: PaymentMethodSaleData[];
   order_status: {
     status: string;
     count: number;
@@ -83,76 +72,10 @@ interface OrderAnalytics {
   }[];
   completion_rate: number;
   cancellation_rate: number;
-  category_sales: {
-    category: string;
-    total_sales: number;
-    item_count: number;
-  }[];
-  daily_trend: {
-    date: string;
-    order_count: number;
-    total_amount: number;
-  }[];
-  summary: {
-    total_orders: number;
-    total_sales: number;
-    avg_order_value: number;
-    period: {
-      start: string;
-      end: string;
-    };
-  };
+  category_sales: CategorySaleData[];
+  daily_trend: DailyTrendData[];
+  summary: OrderAnalyticsSummaryData;
 }
-
-// 성장률에 따른 색상 반환 함수
-const getGrowthRateColor = (rate: number): string => {
-  if (rate > 15) return 'text-green-600';
-  if (rate > 0) return 'text-green-500';
-  if (rate === 0) return 'text-gray-500';
-  if (rate > -15) return 'text-red-500';
-  return 'text-red-600';
-};
-
-// 성장률 아이콘 컴포넌트
-const GrowthRateIcon = ({ rate }: { rate: number }) => {
-  if (rate > 0) return <ArrowUpIcon className="h-5 w-5 text-green-500" />;
-  if (rate < 0) return <ArrowDownIcon className="h-5 w-5 text-red-500" />;
-  return <span className="h-5 w-5">-</span>;
-};
-
-// 매출 요약 카드 컴포넌트
-const SalesSummaryCard = ({ data }: { data: DashboardData['todaySummary'] }) => {
-  const growthRateClass = getGrowthRateColor(data.growthRate);
-  
-  return (
-    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">오늘 매출 요약</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-3 bg-white rounded-lg shadow-sm">
-            <p className="text-xs font-medium text-gray-500 mb-1">오늘 총 매출</p>
-            <p className="text-2xl font-bold">{data.totalSales.toLocaleString()}원</p>
-          </div>
-          <div className="p-3 bg-white rounded-lg shadow-sm">
-            <p className="text-xs font-medium text-gray-500 mb-1">어제 총 매출</p>
-            <p className="text-2xl font-bold">{data.yesterdaySales.toLocaleString()}원</p>
-          </div>
-          <div className="p-3 bg-white rounded-lg shadow-sm">
-            <p className="text-xs font-medium text-gray-500 mb-1">어제 대비 성장률</p>
-            <div className="flex items-center">
-              <GrowthRateIcon rate={data.growthRate} />
-              <p className={`text-2xl font-bold ml-1 ${growthRateClass}`}>
-                {Math.abs(data.growthRate).toFixed(1)}%
-              </p>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
 
 export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData>({
@@ -167,7 +90,7 @@ export default function AdminDashboard() {
   });
   
   const [orderAnalytics, setOrderAnalytics] = useState<OrderAnalytics | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(
     new Date(new Date().setDate(new Date().getDate() - 30))
   );
@@ -191,496 +114,304 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchOrderAnalytics = async () => {
-    setLoading(true);
+  const handleFilterSubmit = async () => {
+    if (!startDate || !endDate) {
+      toast.error('시작일과 종료일을 모두 선택해주세요.');
+      return;
+    }
+    setLoadingAnalytics(true);
     try {
       const token = localStorage.getItem('adminToken');
-      
-      // 날짜 형식 변환
-      const startDateString = startDate ? 
-        `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}` : 
-        undefined;
-        
-      const endDateString = endDate ? 
-        `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}` : 
-        undefined;
-      
-      // 쿼리 파라미터 구성
-      const queryParams = new URLSearchParams();
-      if (startDateString) queryParams.append('start_date', startDateString);
-      if (endDateString) queryParams.append('end_date', endDateString);
-      
-      const url = `/api/admin/order-analytics?${queryParams.toString()}`;
-      
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
+      const response = await fetch(
+        `/api/admin/order-analytics?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (response.ok) {
         const data = await response.json();
         setOrderAnalytics(data);
+        toast.success('주문 분석 데이터 로드 성공!');
       } else {
-        toast.error('주문 분석 데이터를 불러오는데 실패했습니다');
+        toast.error('주문 분석 데이터 로드에 실패했습니다.');
+        setOrderAnalytics(null);
       }
     } catch (error) {
       console.error('주문 분석 데이터 로딩 실패:', error);
-      toast.error('주문 분석 데이터를 불러오는데 실패했습니다');
+      toast.error('주문 분석 데이터를 불러오는데 실패했습니다.');
+      setOrderAnalytics(null);
     } finally {
-      setLoading(false);
+      setLoadingAnalytics(false);
     }
   };
+
+  // OrderMetricsGrid에 전달할 데이터 가공
+  const getOrderMetricsGridData = (): OrderMetricsGridData | null => {
+    if (!orderAnalytics || !orderAnalytics.summary) return null;
+
+    // order_status에서 completed와 cancelled 건수 찾기
+    let completedOrders = 0;
+    let cancelledOrders = 0;
+    // orderAnalytics.order_status 가 존재하고 배열인지 확인
+    if (Array.isArray(orderAnalytics.order_status)) {
+        const completedStatus = orderAnalytics.order_status.find(s => s.status === 'COMPLETED' || s.status === 'DELIVERED'); // 백엔드 상태값에 따라 유연하게
+        const cancelledStatus = orderAnalytics.order_status.find(s => s.status === 'CANCELLED' || s.status === 'REFUNDED');
+        
+        if (completedStatus) completedOrders = completedStatus.count;
+        if (cancelledStatus) cancelledOrders = cancelledStatus.count;
+    }
+
+
+    return {
+      completionRate: orderAnalytics.completion_rate,
+      cancellationRate: orderAnalytics.cancellation_rate,
+      // completedOrders 와 cancelledOrders 는 summary.total_orders 를 기반으로 계산하거나,
+      // order_status 에서 직접 가져와야 함. API 응답에 따라 달라짐.
+      // 여기서는 order_status 에서 가져온다고 가정. (위에서 계산 로직 추가)
+      completedOrders: completedOrders, 
+      cancelledOrders: cancelledOrders,
+      totalOrders: orderAnalytics.summary.total_orders,
+      avgOrderValue: orderAnalytics.summary.avg_order_value,
+      totalSales: orderAnalytics.summary.total_sales,
+      orderStatus: orderAnalytics.order_status,
+      // previousAvgOrderValue, previousTotalSales는 현재 API 응답에 없으므로 undefined
+    };
+  };
+
+  const orderMetricsData = getOrderMetricsGridData();
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <Toaster position="top-right" />
-        <h1 className="text-3xl font-bold">대시보드</h1>
+    <div className="space-y-6">
+      <Toaster position="top-right" />
+      <h1 className="text-3xl font-bold">대시보드</h1>
 
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="overview">개요</TabsTrigger>
-            <TabsTrigger value="order-analytics">주문 분석</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="general">
+        <TabsList className="grid w-full grid-cols-2 md:w-1/2 lg:w-1/3 mb-4">
+          <TabsTrigger value="general">일반 통계</TabsTrigger>
+          <TabsTrigger value="orderAnalysis">주문 상세 분석</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general" className="space-y-6">
+          {/* 실시간 매출 위젯 */}
+          <RealtimeSalesWidget />
           
-          {/* 개요 탭 */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* 실시간 매출 위젯 */}
-            <RealtimeSalesWidget />
-            
-            {/* 매출 요약 카드 (신규) */}
-            {dashboardData.todaySummary && (
-              <SalesSummaryCard data={dashboardData.todaySummary} />
-            )}
-            
-            {/* 일일 매출 그래프 - 전년 동기 대비 추가 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>일일 매출 (전년 동기 대비)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={dashboardData.dailySales}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip 
-                        formatter={(value, name) => {
-                          if (name === 'growthRate') return [`${value}%`, '성장률'];
-                          return [`${Number(value).toLocaleString()}원`, name === 'amount' ? '올해 매출' : '작년 매출'];
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="amount" name="올해 매출" fill="#8884d8" />
-                      <Bar dataKey="lastYearAmount" name="작년 매출" fill="#82ca9d" />
-                      <Line
-                        type="monotone"
-                        dataKey="growthRate"
-                        name="성장률"
-                        stroke="#ff7300"
-                        yAxisId={1}
-                        dot={{ stroke: '#ff7300', strokeWidth: 2 }}
-                      />
-                      <YAxis 
-                        yAxisId={1} 
-                        orientation="right" 
-                        domain={['auto', 'auto']}
-                        tickFormatter={(value) => `${value}%`}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          {/* 매출 요약 카드 (신규) */}
+          <SalesSummaryCard data={dashboardData.todaySummary} />
+          
+          {/* 일일 매출 그래프 - 전년 동기 대비 추가 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>일일 매출 (전년 동기 대비)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={dashboardData.dailySales}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value, name) => {
+                        if (name === 'growthRate') return [`${value}%`, '성장률'];
+                        return [`${Number(value).toLocaleString()}원`, name === 'amount' ? '올해 매출' : '작년 매출'];
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="amount" name="올해 매출" fill="#8884d8" />
+                    <Bar dataKey="lastYearAmount" name="작년 매출" fill="#82ca9d" />
+                    <Line
+                      type="monotone"
+                      dataKey="growthRate"
+                      name="성장률"
+                      stroke="#ff7300"
+                      yAxisId={1}
+                      dot={{ stroke: '#ff7300', strokeWidth: 2 }}
+                    />
+                    <YAxis 
+                      yAxisId={1} 
+                      orientation="right" 
+                      domain={['auto', 'auto']}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* 최근 주문 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>최근 주문</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">주문 ID</th>
-                        <th className="text-left p-2">메뉴</th>
-                        <th className="text-left p-2">총액</th>
-                        <th className="text-left p-2">상태</th>
-                        <th className="text-left p-2">날짜</th>
+          {/* 최근 주문 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>최근 주문</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        주문 ID
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        메뉴
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        총액
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        상태
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        날짜
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {dashboardData.recentOrders.map((order) => (
+                      <tr key={order.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {order.id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-pre-wrap text-sm text-gray-500">
+                          {(() => {
+                            let parsedItems: any[] = [];
+                            if (typeof order.items === 'string') {
+                              try {
+                                parsedItems = JSON.parse(order.items);
+                              } catch (e) {
+                                console.error(
+                                  'Failed to parse order.items (string):',
+                                  e,
+                                  order.items
+                                );
+                                return order.items; // 파싱 실패시 원본 문자열 반환
+                              }
+                            } else if (Array.isArray(order.items)) {
+                              parsedItems = order.items; // 이미 배열이면 그대로 사용
+                            } else {
+                              console.warn(
+                                'order.items is neither a string nor an array:',
+                                order.items
+                              );
+                              return '잘못된 메뉴 형식'; // 알 수 없는 타입
+                            }
+
+                            if (Array.isArray(parsedItems)) {
+                              return parsedItems
+                                .map(
+                                  (item: any) =>
+                                    `${item.menu_name} ${item.quantity}개`
+                                )
+                                .join(', ');
+                            } else {
+                              console.warn(
+                                'Parsed items is not an array after processing:',
+                                parsedItems
+                              );
+                              return '메뉴 정보 처리 오류';
+                            }
+                          })()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {order.total.toLocaleString()}원
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {order.status}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(order.date).toLocaleString()}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {dashboardData.recentOrders.map((order) => (
-                        <tr key={order.id} className="border-b">
-                          <td className="p-2">{order.id}</td>
-                          <td className="p-2">{order.items}</td>
-                          <td className="p-2">{order.total.toLocaleString()}원</td>
-                          <td className="p-2">{order.status}</td>
-                          <td className="p-2">{order.date}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 기존 인기 메뉴 PieChart 로직을 아래 컴포넌트로 대체 */}
+          {dashboardData && dashboardData.popularItems && (
+            <PopularMenuItemsChart data={dashboardData.popularItems} colors={COLORS} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="orderAnalysis" className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-2">
+              <DatePicker date={startDate} setDate={setStartDate} placeholder="시작일" />
+              <span>~</span>
+              <DatePicker date={endDate} setDate={setEndDate} placeholder="종료일" />
+            </div>
+            <Button onClick={handleFilterSubmit} disabled={loadingAnalytics}>
+              {loadingAnalytics ? '조회 중...' : '분석 데이터 조회'}
+            </Button>
+          </div>
+
+          {loadingAnalytics && (
+            <div className="flex justify-center items-center py-10">
+              <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <p className="ml-2">주문 분석 데이터를 불러오는 중입니다...</p>
+            </div>
+          )}
+
+          {!loadingAnalytics && !orderAnalytics && (
+            <div className="text-center py-10 text-gray-500">
+              분석할 데이터가 없거나, 기간을 선택하고 '분석 데이터 조회' 버튼을 클릭해주세요.
+            </div>
+          )}
+
+          {!loadingAnalytics && orderAnalytics && orderMetricsData && (
+            <>
+              <div className="space-y-6">
+                {/* 주문 분석 요약 카드 */}
+                <OrderAnalyticsSummaryCard summary={orderAnalytics?.summary} isLoading={loadingAnalytics} />
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* 시간대별 주문 분석 차트 */}
+                  {orderAnalytics && <HourlyOrdersChart data={orderAnalytics.hourly_orders} />}
+                  
+                  {/* 결제 수단별 분석 차트 */}
+                  {orderAnalytics && <PaymentMethodChart data={orderAnalytics.payment_method_sales} />}
+
+                  {/* 카테고리별 매출 분석 차트 */}
+                  {orderAnalytics && <CategorySalesChart data={orderAnalytics.category_sales} />}
+
+                  {/* 고급 메뉴 분석 차트 (AdvancedMenuChart)는 이미 컴포넌트화 되어 있음 */}
+                  {orderAnalytics && orderAnalytics.menu_sales && orderAnalytics.menu_sales.length > 0 && (
+                    <AdvancedMenuChart data={orderAnalytics.menu_sales} />
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* 인기 메뉴 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>인기 메뉴</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {dashboardData.popularItems.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <span>{item.name}</span>
-                      <span className="font-bold">{item.count}회 주문</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* 주문 분석 탭 */}
-          <TabsContent value="order-analytics" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>기간 선택</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
-                  <div className="flex flex-col gap-2">
-                    <span className="text-sm text-gray-500">시작일</span>
-                    <DatePicker 
-                      date={startDate} 
-                      setDate={setStartDate} 
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <span className="text-sm text-gray-500">종료일</span>
-                    <DatePicker 
-                      date={endDate} 
-                      setDate={setEndDate} 
-                      className="w-full"
-                    />
-                  </div>
-                  <Button 
-                    className="mt-6" 
-                    onClick={fetchOrderAnalytics}
-                    disabled={loading}
-                  >
-                    {loading ? '로딩 중...' : '조회'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {orderAnalytics ? (
-              <>
-                {/* 요약 정보 - 메트릭스 카드로 교체 */}
-                <OrderMetricsGrid
-                  data={{
-                    completionRate: orderAnalytics.completion_rate,
-                    cancellationRate: orderAnalytics.cancellation_rate,
-                    completedOrders: orderAnalytics.order_status.find(s => s.status === 'completed')?.count || 0,
-                    cancelledOrders: orderAnalytics.order_status.find(s => s.status === 'cancelled')?.count || 0,
-                    totalOrders: orderAnalytics.summary.total_orders,
-                    avgOrderValue: orderAnalytics.summary.avg_order_value,
-                    totalSales: orderAnalytics.summary.total_sales
-                  }}
-                  className="mb-6"
-                />
-
-                {/* 메뉴 판매량 분석 - 고급 차트로 교체 */}
-                <AdvancedMenuChart 
-                  data={orderAnalytics.menu_sales} 
-                  className="mb-6"
-                />
-
-                {/* 일별 주문 및 매출 추이 - 개선된 시각화 */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>일별 주문 및 매출 추이</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={orderAnalytics.daily_trend}>
-                          <defs>
-                            <linearGradient id="colorOrderCount" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" />
-                          <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                          <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                          <Tooltip 
-                            formatter={(value, name) => [
-                              name === 'order_count' ? `${value}건` : `${Number(value).toLocaleString()}원`,
-                              name === 'order_count' ? '주문 수' : '매출액'
-                            ]}
-                          />
-                          <Legend />
-                          <Area 
-                            yAxisId="left" 
-                            type="monotone" 
-                            dataKey="order_count" 
-                            name="주문 수" 
-                            stroke="#8884d8" 
-                            fillOpacity={1} 
-                            fill="url(#colorOrderCount)" 
-                          />
-                          <Area 
-                            yAxisId="right" 
-                            type="monotone" 
-                            dataKey="total_amount" 
-                            name="매출액" 
-                            stroke="#82ca9d" 
-                            fillOpacity={1} 
-                            fill="url(#colorAmount)" 
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 시간대별 주문량 */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>시간대별 주문량</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={orderAnalytics.hourly_orders}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="hour" tickFormatter={(hour) => `${hour}시`} />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="order_count" name="주문 수" fill="#8884d8" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 결제 방법별 매출 */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>결제 방법별 매출</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col md:flex-row justify-between">
-                    <div className="w-full md:w-1/2 h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={orderAnalytics.payment_method_sales}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="total_amount"
-                            nameKey="method"
-                            label={({ method, percent }) => `${method} (${(percent * 100).toFixed(0)}%)`}
-                          >
-                            {orderAnalytics.payment_method_sales.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value) => `${Number(value).toLocaleString()}원`} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="w-full md:w-1/2 overflow-x-auto">
-                      <table className="w-full mt-4 md:mt-0">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-2">결제 방법</th>
-                            <th className="text-right p-2">주문 수</th>
-                            <th className="text-right p-2">매출</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {orderAnalytics.payment_method_sales.map((item, index) => (
-                            <tr key={index} className="border-b">
-                              <td className="p-2">{item.method}</td>
-                              <td className="p-2 text-right">{item.order_count.toLocaleString()}</td>
-                              <td className="p-2 text-right">{item.total_amount.toLocaleString()}원</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 카테고리별 매출 */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>카테고리별 매출</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col md:flex-row justify-between">
-                    <div className="w-full md:w-1/2 h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={orderAnalytics.category_sales}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="total_sales"
-                            nameKey="category"
-                            label={({ category, percent }) => `${category} (${(percent * 100).toFixed(0)}%)`}
-                          >
-                            {orderAnalytics.category_sales.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value) => `${Number(value).toLocaleString()}원`} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="w-full md:w-1/2 overflow-x-auto">
-                      <table className="w-full mt-4 md:mt-0">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-2">카테고리</th>
-                            <th className="text-right p-2">항목 수</th>
-                            <th className="text-right p-2">매출</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {orderAnalytics.category_sales.map((item, index) => (
-                            <tr key={index} className="border-b">
-                              <td className="p-2">{item.category}</td>
-                              <td className="p-2 text-right">{item.item_count.toLocaleString()}</td>
-                              <td className="p-2 text-right">{item.total_sales.toLocaleString()}원</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 주문 상태 분석 */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>주문 상태 분석</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col md:flex-row gap-6">
-                      <div className="w-full md:w-1/2">
-                        <h3 className="text-lg font-medium mb-4">주문 완료율 및 취소율</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          <Card className="bg-green-50">
-                            <CardContent className="p-4">
-                              <div className="text-sm text-gray-600">완료율</div>
-                              <div className="text-2xl font-bold text-green-600">{orderAnalytics.completion_rate.toFixed(1)}%</div>
-                            </CardContent>
-                          </Card>
-                          <Card className="bg-red-50">
-                            <CardContent className="p-4">
-                              <div className="text-sm text-gray-600">취소율</div>
-                              <div className="text-2xl font-bold text-red-600">{orderAnalytics.cancellation_rate.toFixed(1)}%</div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      </div>
-                      <div className="w-full md:w-1/2">
-                        <h3 className="text-lg font-medium mb-4">주문 상태별 분포</h3>
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="border-b">
-                                <th className="text-left p-2">상태</th>
-                                <th className="text-right p-2">건수</th>
-                                <th className="text-right p-2">비율</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {orderAnalytics.order_status.map((item, index) => (
-                                <tr key={index} className="border-b">
-                                  <td className="p-2">{item.status}</td>
-                                  <td className="p-2 text-right">{item.count.toLocaleString()}</td>
-                                  <td className="p-2 text-right">{item.percentage.toFixed(1)}%</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 메뉴별 판매량 */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>메뉴별 판매량 순위</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-2">순위</th>
-                            <th className="text-left p-2">메뉴명</th>
-                            <th className="text-left p-2">카테고리</th>
-                            <th className="text-right p-2">판매 수량</th>
-                            <th className="text-right p-2">매출</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {orderAnalytics.menu_sales.map((item, index) => (
-                            <tr key={index} className="border-b">
-                              <td className="p-2">{index + 1}</td>
-                              <td className="p-2">{item.name}</td>
-                              <td className="p-2">{item.category}</td>
-                              <td className="p-2 text-right">{item.quantity.toLocaleString()}</td>
-                              <td className="p-2 text-right">{item.total_sales.toLocaleString()}원</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            ) : (
-              <Card>
-                <CardContent className="flex items-center justify-center p-12">
-                  <div className="text-center">
-                    <p className="mb-4 text-gray-500">분석 데이터가 없습니다.</p>
-                    <Button onClick={fetchOrderAnalytics}>데이터 불러오기</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-    </AdminLayout>
+                {/* 주문 상태, 완료율/취소율 등은 OrderMetricsGrid 에서 표시될 수 있음 */}
+                <OrderMetricsGrid data={orderMetricsData} />
+              </div>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 } 

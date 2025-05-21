@@ -3,7 +3,11 @@ import "./globals.css";
 import { CONFIG } from "@/config";
 import { RootLayoutClient } from "@/components/layout/RootLayoutClient";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: 'swap', // 폰트 로딩 중에도 텍스트가 보이도록 설정
+  preload: true, // 사전 로드 활성화
+});
 
 // metadata는 별도의 파일로 분리
 export const metadata = {
@@ -20,8 +24,9 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
-        <title>{CONFIG.site.name}</title>
-        <meta name="description" content={CONFIG.site.description} />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#0A67C7" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       </head>
       <body className={`${inter.className} min-h-screen bg-white dark:bg-gray-900`}>
         <RootLayoutClient>{children}</RootLayoutClient>

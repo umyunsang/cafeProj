@@ -7,6 +7,11 @@ class Recommendation(BaseModel):
     description: str
     image_url: Optional[str] = None
 
+class RecommendationCreate(BaseModel):
+    name: str
+    description: str
+    image_url: Optional[str] = None
+
 class MenuRecommendation(BaseModel):
     menu_id: str
     name: str

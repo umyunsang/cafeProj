@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 import { CheckCircle, ShoppingBag, Clock } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import cookieManager from '@/lib/cookies';
 
 // 백엔드 OrderResponse 스키마와 일치하도록 인터페이스 업데이트
 interface OrderItemResponse {
@@ -20,253 +21,113 @@ interface OrderItemResponse {
 }
 
 interface OrderResponse {
-  id: number;
-  order_number: string | null;
-  user_id: number | null;
+  id: string;
+  created_at: string;
+  order_items: OrderItemResponse[];
   total_amount: number;
   status: string;
-  payment_method: string | null;
-  payment_key: string | null;
-  session_id: string | null;
-  delivery_address: string | null;
-  delivery_request: string | null;
-  phone_number: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  items: OrderItemResponse[];
+  payment_method: string;
 }
 
-export default function PaymentSuccessPage() {
+// Suspense 폴백 UI
+function PaymentDetailsLoading() {
+  return (
+    <div className="container mx-auto py-12 px-4">
+      <div className="flex justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    </div>
+  );
+}
+
+// useSearchParams를 사용하는 로직을 담는 컴포넌트
+function PaymentDetails() {
   const router = useRouter();
-  const { clearCart, sessionId } = useCart();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [order, setOrder] = useState<OrderResponse | null>(null); // OrderResponse 타입 사용
-  const [error, setError] = useState<string | null>(null);
-  const [cartCleared, setCartCleared] = useState(false);
-  const [localSessionId, setLocalSessionId] = useState<string | null>(null);
+  const searchParams = useSearchParams(); // 이 컴포넌트 내에서 useSearchParams 사용
+  const { clearCart } = useCart();
+  const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // 로컬 스토리지에서 세션 ID 가져오기
+  const orderIdFromUrl = searchParams.get('order_id');
+  const [hasProcessed, setHasProcessed] = useState(false); // 처리 여부 상태 추가
+
   useEffect(() => {
-    console.log("Effect 1: Attempting to load sessionId from localStorage");
-    const storedSessionId = localStorage.getItem('sessionId');
-    if (storedSessionId) {
-      setLocalSessionId(storedSessionId);
-      console.log('Effect 1: Loaded localSessionId:', storedSessionId);
-    } else {
-      console.log("Effect 1: No sessionId found in localStorage");
+    if (!orderIdFromUrl) {
+      toast.error('잘못된 접근입니다. 주문 정보가 없습니다.');
+      if (!hasProcessed) router.push('/menu'); // 중복 라우팅 방지
+      return;
     }
-  }, []); // Runs only once on mount
 
-  useEffect(() => {
-    console.log("Effect 2: Running. Dependencies:", { router, sessionId, localSessionId, cartCleared });
-    const effectiveSessionId = sessionId || localSessionId;
-
-    const handlePaymentSuccess = async () => {
-        console.log("handlePaymentSuccess: Inside function. Current state:", { isProcessing, order: !!order, error: !!error });
-      // 중복 실행 방지 체크 강화: 이미 완료되었거나 오류 상태면 종료
-      if (order || error) {
-          console.log('handlePaymentSuccess: Stopping execution because order or error is already set.');
-          // 만약 order나 error가 설정되었는데 isProcessing이 true이면 false로 정정
-          if (isProcessing) {
-             console.log("handlePaymentSuccess: Correcting isProcessing to false because order/error is set.");
-             setIsProcessing(false);
-          }
-          return;
-      }
-      // isProcessing 이 이미 true면 로직 실행 중이므로 반환 (동시 호출 방지)
-       if (isProcessing) {
-           console.log("handlePaymentSuccess: Stopping execution because isProcessing is already true.");
-           return;
-       }
-
-      console.log('handlePaymentSuccess: Setting isProcessing to true.');
-      setIsProcessing(true); // 실제 처리 시작 직전에 true로 설정
-
+    const loadOrderData = async () => {
+      setLoading(true);
       try {
-        const params = new URLSearchParams(window.location.search);
-        const pg_token = params.get('pg_token');
-        const order_id = params.get('order_id');
-        const tid = sessionStorage.getItem('kakaoPaymentTid');
-        console.log('handlePaymentSuccess: Payment info:', { pg_token, order_id, tid });
+        if (!hasProcessed) { // 아직 처리되지 않은 경우에만 실행
+          const storedOrderData = sessionStorage.getItem('lastCompletedOrder');
+          console.log('[SuccessPage] sessionStorage.getItem("lastCompletedOrder") 직후:', storedOrderData);
+          if (storedOrderData) {
+            const parsedOrder = JSON.parse(storedOrderData);
+            console.log('[SuccessPage] parsedOrder:', parsedOrder);
 
-        if (tid) {
-          sessionStorage.removeItem('kakaoPaymentTid');
-          console.log('handlePaymentSuccess: Removed TID from sessionStorage');
-        }
-
-        if (!order_id) {
-          console.error('handlePaymentSuccess: Order ID missing');
-          setError('주문 정보를 찾을 수 없습니다.');
-          console.log('handlePaymentSuccess: Setting isProcessing to false (order_id missing).');
-          setIsProcessing(false);
-          return;
-        }
-
-        // effectiveSessionId는 effect 시작 시점에 이미 검증됨
-        if (!effectiveSessionId) {
-           console.error('handlePaymentSuccess: Session ID missing (should not happen here)');
-           setError('세션 ID가 없습니다. 다시 시도해주세요.');
-           console.log('handlePaymentSuccess: Setting isProcessing to false (sessionId missing).');
-           setIsProcessing(false);
-           return;
-        }
-        console.log('handlePaymentSuccess: Effective Session ID:', effectiveSessionId);
-
-        // --- API 호출 로직 ---
-        try {
-          let orderData: OrderResponse | null = null;
-          console.log('handlePaymentSuccess: Entering API call try block.');
-
-          if (tid && pg_token) {
-            console.log('handlePaymentSuccess: Attempting KakaoPay complete API call.');
-            const completeResponse = await fetch('/api/payment/kakao/complete', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Session-ID': effectiveSessionId
-              },
-              body: JSON.stringify({
-                pg_token,
-                order_id,
-                tid,
-              }),
-            });
-
-            if (!completeResponse.ok) {
-              const errorData = await completeResponse.json();
-              console.error('handlePaymentSuccess: KakaoPay complete API failed:', errorData);
-              throw new Error(errorData.detail || '결제 완료 처리에 실패했습니다.');
+            if (parsedOrder.id && orderIdFromUrl && parsedOrder.id.toString() === orderIdFromUrl) {
+              setOrder(parsedOrder);
+              toast.success('결제가 성공적으로 완료되었습니다!');
+              clearCart(); // 성공 시 장바구니 비우기
+              sessionStorage.removeItem('lastCompletedOrder'); // 성공 시 세션 스토리지 정리
+              setHasProcessed(true); // 처리 완료 표시
+              console.log("[SuccessPage] Order processed, cart cleared, session item removed.");
+            } else {
+              console.error(
+                '세션에 저장된 주문 ID와 URL의 주문 ID가 일치하지 않거나, 세션 데이터에 ID가 없습니다.',
+                '저장된 데이터:', parsedOrder,
+                'URL ID:', orderIdFromUrl
+              );
+              toast.error('주문 정보를 처리하는 중 문제가 발생했습니다. 주문 내역을 확인해주세요.');
+              sessionStorage.removeItem('lastCompletedOrder'); // 오류 시에도 세션 정리
+              setHasProcessed(true); // 처리 시도 완료 (오류지만)
             }
-
-            const completeData = await completeResponse.json();
-            if (!completeData || !completeData.order) {
-              console.error('handlePaymentSuccess: KakaoPay complete response format error:', completeData);
-              throw new Error('결제 완료 응답 형식이 올바르지 않습니다.');
-            }
-            console.log('handlePaymentSuccess: KakaoPay complete API successful.');
-            orderData = completeData.order;
-
           } else {
-             console.log('handlePaymentSuccess: Attempting direct order fetch API call.');
-            const orderResponse = await fetch(`/api/orders/${order_id}`, {
-              headers: {
-                'X-Session-ID': effectiveSessionId
-              },
-              credentials: 'include'
-            });
-
-              if (!orderResponse.ok) {
-               const errorData = await orderResponse.json();
-               console.error('handlePaymentSuccess: Direct order fetch API failed:', { status: orderResponse.status, data: errorData });
-               if (orderResponse.status === 403) {
-                   throw new Error(`주문 정보를 조회할 권한이 없습니다 (${errorData.detail || 'Forbidden'}). 세션이 만료되었거나 잘못된 접근일 수 있습니다.`);
-               } else {
-                   throw new Error(`주문 정보를 조회할 수 없습니다 (${errorData.detail || orderResponse.statusText}).`);
-               }
-             }
-             orderData = await orderResponse.json();
-             console.log('handlePaymentSuccess: Direct order fetch API successful.');
+            console.error('세션 스토리지에서 주문 정보를 찾을 수 없습니다. (lastCompletedOrder is null)');
+            toast.error('결제 완료 정보를 찾을 수 없습니다. 주문 내역을 확인하거나 다시 시도해주세요.');
+            setHasProcessed(true); // 처리 시도 완료 (오류지만)
           }
-
-          // --- 주문 정보 및 장바구니 처리 ---
-          if (orderData) {
-            console.log('handlePaymentSuccess: Order data received, updating state.');
-            console.log('Received order data:', orderData);
-            setOrder(orderData);
-            if (!cartCleared) {
-              // clearCart는 비동기일 수 있으므로 await 사용
-              await clearCart();
-              setCartCleared(true);
-              console.log('handlePaymentSuccess: Cart cleared.');
-              toast.success('결제가 완료되었습니다.');
-            }
-            console.log('handlePaymentSuccess: Setting isProcessing to false (success).');
-            setIsProcessing(false); // Set processing to false on success
-
-          } else {
-             console.error('handlePaymentSuccess: No order data received after API calls.');
-             // 이 경우는 에러로 간주
-             throw new Error('주문 데이터를 가져오지 못했습니다.');
-          }
-
-        } catch (apiError) {
-          console.error('handlePaymentSuccess: API call failed:', apiError);
-          if (!error) { // Avoid overwriting existing error state
-            setError(apiError instanceof Error ? apiError.message : '결제 처리 중 오류가 발생했습니다.');
-            toast.error(apiError instanceof Error ? apiError.message : '결제 처리 중 오류가 발생했습니다.');
-          }
-           console.log('handlePaymentSuccess: Setting isProcessing to false (API error).');
-           setIsProcessing(false); // Set processing to false on API error
         }
-        // --- API 호출 로직 끝 ---
-
-      } catch (outerError) {
-        console.error('handlePaymentSuccess: Outer logic error:', outerError);
-        if (!error) {
-          setError('결제 처리 중 예기치 않은 오류가 발생했습니다.');
-          toast.error('결제 처리 중 예기치 않은 오류가 발생했습니다.');
-        }
-         console.log('handlePaymentSuccess: Setting isProcessing to false (outer error).');
-         setIsProcessing(false); // Set processing to false on outer error
+      } catch (error: any) {
+        console.error('결제 성공 페이지 오류:', error);
+        toast.error(error.message || '주문 정보를 불러오는 중 오류가 발생했습니다.');
+        setHasProcessed(true); // 처리 시도 완료 (오류지만)
+      } finally {
+        setLoading(false);
       }
     };
 
-    // --- Effect Trigger Logic ---
-    console.log("Effect 2: Checking conditions to call handlePaymentSuccess.");
-    if (effectiveSessionId && !order && !error) {
-        // isProcessing 상태를 여기서 직접 확인하여 중복 호출 방지
-        if (!isProcessing) {
-            console.log("Effect 2: Conditions met and not processing. Calling handlePaymentSuccess.");
-            handlePaymentSuccess();
-        } else {
-            console.log("Effect 2: Conditions met BUT already processing. Skipping call.");
-        }
-    } else if (!effectiveSessionId) {
-        console.log('Effect 2: Waiting for effectiveSessionId.');
-    } else if (order) {
-        console.log('Effect 2: Order already loaded, skipping call.');
-         // Ensure loading is off if order is loaded but processing is somehow still true
-         if (isProcessing) {
-             console.log("Effect 2: Correcting isProcessing to false as order is loaded.");
-             setIsProcessing(false);
-         }
-    } else if (error) {
-        console.log('Effect 2: Error occurred previously, skipping call.');
-         // Ensure loading is off if error occurred previously but processing is somehow still true
-         if (isProcessing) {
-             console.log("Effect 2: Correcting isProcessing to false as error occurred.");
-             setIsProcessing(false);
-         }
-    } else {
-         // 이 경우는 거의 발생하지 않아야 함 (디버깅용)
-         console.log('Effect 2: Conditions not met for unknown reason, skipping call.', { effectiveSessionId: !!effectiveSessionId, order: !!order, error: !!error, isProcessing });
-     }
-    // --- Effect Trigger Logic End ---
+    if (!order && !hasProcessed) {
+        loadOrderData();
+    }
 
-    // 의존성 배열에서 isProcessing, order, error 제거
-  }, [router, sessionId, localSessionId, cartCleared, clearCart]);
+  // order 상태가 직접적으로 useEffect를 다시 트리거하지 않도록 의존성 배열에서 order 제거
+  }, [orderIdFromUrl, router, clearCart, hasProcessed]); 
 
-  if (isProcessing) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="max-w-lg mx-auto p-6 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4">결제 처리 중입니다...</p>
-        </Card>
-      </div>
-    );
+  if (loading && !order) {
+    return <PaymentDetailsLoading />; // 로딩 중 UI 사용
   }
 
-  if (error) {
+  if (!order) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto py-12 px-4">
         <Card className="max-w-lg mx-auto p-6">
-          <h1 className="text-2xl font-bold mb-4 text-center">결제 오류</h1>
-          <p className="text-red-500 text-center mb-4">{error}</p>
-          <div className="mt-6 text-center">
-            <Button onClick={() => router.push('/menu')} className="w-full">
-              메뉴로 돌아가기
-            </Button>
+          <div className="flex flex-col items-center text-center">
+            <div className="p-3 bg-red-100 rounded-full mb-4">
+              <ShoppingBag className="h-10 w-10 text-red-500" />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">주문 정보를 찾을 수 없습니다</h1>
+            <p className="text-muted-foreground mb-6">
+              요청하신 주문 정보를 불러오는데 실패했습니다. 다시 시도해주세요.
+            </p>
+            <div className="space-x-4">
+              <Button onClick={() => router.push('/menu')}>
+                메뉴로 돌아가기
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
@@ -274,82 +135,66 @@ export default function PaymentSuccessPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto py-12 px-4">
       <Card className="max-w-lg mx-auto p-6">
-        <div className="text-center mb-6">
-          <div className="flex justify-center mb-4">
-            <CheckCircle className="h-12 w-12 text-green-500" />
+        <div className="flex flex-col items-center text-center">
+          <div className="p-3 bg-green-100 rounded-full mb-4">
+            <CheckCircle className="h-10 w-10 text-green-500" />
           </div>
-          <h1 className="text-2xl font-bold mb-2">결제가 완료되었습니다</h1>
-          <p className="text-gray-500">주문하신 상품은 준비 후 제공해 드리겠습니다</p>
-        </div>
-        
-        {order && (
-          <div className="space-y-6">
-            {/* 주문번호 강조 표시 */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <div className="text-center">
-                <p className="text-sm text-gray-500 mb-1">주문번호</p>
-                <p className="text-3xl font-bold text-primary">
-                  {order.order_number?.split('-')[1] || order.id}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">이 번호를 기억해주세요</p>
-              </div>
+          <h1 className="text-2xl font-bold mb-2">주문이 완료되었습니다</h1>
+          <p className="text-muted-foreground mb-6">
+            감사합니다! 주문이 성공적으로 처리되었습니다.
+          </p>
+          
+          <div className="w-full mb-6">
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-muted-foreground">주문 번호</span>
+              <span className="font-medium">{order.id}</span>
             </div>
-            
-            {/* 주문 정보 요약 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="flex items-center mb-1">
-                  <ShoppingBag className="h-4 w-4 mr-1 text-gray-500" />
-                  <p className="text-sm font-medium">결제금액</p>
-                </div>
-                <p className="text-lg font-bold">{order.total_amount.toLocaleString()}원</p>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="flex items-center mb-1">
-                  <Clock className="h-4 w-4 mr-1 text-gray-500" />
-                  <p className="text-sm font-medium">주문일시</p>
-                </div>
-                <p className="text-sm">{formatDate(order.created_at)}</p>
-              </div>
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-muted-foreground">주문 일시</span>
+              <span className="font-medium">{formatDate(new Date(order.created_at))}</span>
             </div>
-            
-            {/* 결제 상태 */}
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-sm font-medium mb-1">결제상태</p>
-              <p className={`font-bold ${order.status === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
-                {order.status === 'paid' ? '결제완료' : order.status === 'pending' ? '결제대기' : order.status}
-              </p>
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-muted-foreground">결제 방법</span>
+              <span className="font-medium">{order.payment_method}</span>
             </div>
-
-            {/* 주문 내역 */}
-            <div className="border-t pt-4">
-              <h2 className="font-semibold mb-3 flex items-center">
-                <ShoppingBag className="h-5 w-5 mr-2 text-primary" />
-                주문 내역
-              </h2>
-              <div className="space-y-3">
-                {order.items && order.items.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                    <div>
-                      <span className="font-medium">{item.menu_name}</span>
-                      <span className="text-gray-500 ml-2">x {item.quantity}</span>
-                    </div>
-                    <span className="font-medium">{item.total_price.toLocaleString()}원</span>
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-muted-foreground">주문 상태</span>
+              <span className="font-medium">
+                {order.status === 'completed' ? '완료' : 
+                 order.status === 'cancelled' ? '취소됨' : 
+                 '처리중'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <span className="font-medium">총 결제 금액</span>
+              <span className="font-bold text-lg">{order.total_amount.toLocaleString()}원</span>
             </div>
           </div>
-        )}
-
-        <div className="mt-8 text-center">
-          <Button onClick={() => router.push('/menu')} className="w-full">
-            메뉴로 돌아가기
-          </Button>
+          
+          <p className="text-sm text-muted-foreground mb-6">
+            주문 내역은 '주문 내역' 페이지에서 확인하실 수 있습니다.
+          </p>
+          
+          <div className="space-x-4">
+            <Button onClick={() => router.push('/orders')}>
+              주문 내역 보기
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/menu')}>
+              메뉴로 돌아가기
+            </Button>
+          </div>
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={<PaymentDetailsLoading />}>
+      <PaymentDetails />
+    </Suspense>
   );
 } 

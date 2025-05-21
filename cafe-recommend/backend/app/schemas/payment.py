@@ -92,4 +92,24 @@ class KakaoPayCompleteRequest(BaseModel):
     """카카오페이 결제 완료 요청 스키마"""
     pg_token: str
     order_id: str # 주문 ID는 문자열로 받을 수 있음 (프론트에서 stringify 함)
-    tid: str 
+    tid: str
+
+# 환불 요청 스키마 추가
+class RefundRequest(BaseModel):
+    """환불 요청 스키마"""
+    order_id: int
+    reason: Optional[str] = None  # 환불 사유
+    refund_amount: Optional[float] = None  # 환불 금액 (부분 환불 대비)
+
+# 환불 응답 스키마 추가
+class RefundResponse(BaseModel):
+    """환불 처리 결과 스키마"""
+    order_id: int
+    refund_id: str  # 환불 처리 ID
+    amount: float  # 환불된 금액
+    status: str  # 환불 상태 (completed, failed)
+    payment_method: str  # 결제 방법
+    refunded_at: datetime  # 환불 처리 시간
+
+    class Config:
+        from_attributes = True 

@@ -12,6 +12,7 @@ class UserBase(BaseModel):
     preferences: Dict[str, Any] = {}
     is_active: bool = True
     is_admin: bool = False
+    is_superuser: bool = False
     taste_preference: Optional[str] = None
 
 class UserCreate(UserBase):
@@ -44,11 +45,4 @@ class User(UserInDBBase):
     pass
 
 class UserInDB(UserInDBBase):
-    hashed_password: str
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenPayload(BaseModel):
-    sub: str  # email 
+    hashed_password: str 

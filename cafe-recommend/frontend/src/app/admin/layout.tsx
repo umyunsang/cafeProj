@@ -1,33 +1,50 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from '@/contexts/AuthContext';
+import { ReactNode, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Toaster } from 'sonner';
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+interface AdminLayoutClientProps {
+  children: ReactNode;
+}
+
+function AdminLayoutClient({ children }: AdminLayoutClientProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    try {
-      const token = localStorage.getItem("adminToken");
-      // 로그인된 상태에서 /admin 접속 시 메뉴 관리 페이지로 이동
-      if (token && pathname === "/admin") {
-        router.push("/admin/menus");
-      }
-    } catch (error) {
-      console.error("localStorage access error:", error);
+    if (!isLoading && !isAuthenticated && pathname !== '/admin') {
+      router.push('/admin');
+    } else if (!isLoading && isAuthenticated && pathname === '/admin') {
+      router.push('/admin/dashboard');
     }
-  }, [pathname, router]);
+  }, [isLoading, isAuthenticated, router, pathname]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-neutral-100 dark:bg-neutral-900">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-600 dark:border-primary-400"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && pathname !== '/admin') {
+    return null;
+  }
+  
+  if (pathname === '/admin') {
+    return <>{children}</>;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </div>
-    </div>
+    <main className="flex-1 p-4 md:p-6 lg:p-8 bg-neutral-50 dark:bg-neutral-950">
+      {children}
+    </main>
   );
+}
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  return <AdminLayoutClient>{children}</AdminLayoutClient>;
 } 

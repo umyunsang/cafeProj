@@ -6,14 +6,15 @@ from typing import Optional, List
 from app.database import get_db
 from app.models.order import Order, OrderItem
 from app.models.menu import Menu
-from app.api.admin.auth import oauth2_scheme
+from app.api.deps import get_current_active_admin, get_db
+from app.models.admin import Admin
 import json
 
 router = APIRouter()
 
 @router.get("/dashboard")
 async def get_dashboard_data(
-    token: str = Depends(oauth2_scheme),
+    current_admin: Admin = Depends(get_current_active_admin),
     db: Session = Depends(get_db)
 ):
     try:
@@ -94,22 +95,32 @@ async def get_dashboard_data(
                 {
                     "date": sale.date.strftime("%Y-%m-%d") if sale.date else None,
                     "amount": float(sale.amount) if sale.amount else 0,
-                    "lastYearAmount": last_year_data.get(sale.date.strftime("%m-%d"), 0),
+                    "lastYearAmount": last_year_data.get(sale.date.strftime("%m-%d"), 0) if sale.date else 0,
                     "growthRate": calculate_growth_rate(
                         float(sale.amount) if sale.amount else 0,
-                        last_year_data.get(sale.date.strftime("%m-%d"), 0)
+                        last_year_data.get(sale.date.strftime("%m-%d"), 0) if sale.date else 0
                     )
                 }
                 for sale in daily_sales
             ],
             "recentOrders": [
-                {
-                    "id": order.id,
-                    "items": json.loads(order.items) if isinstance(order.items, str) else order.items,
-                    "total": float(order.total_amount) if order.total_amount else 0,
-                    "status": order.status,
-                    "date": order.created_at.strftime("%Y-%m-%d %H:%M") if order.created_at else None
-                }
+                (lambda o: {
+                    "id": o.id,
+                    "items": (
+                        lambda items_str: json.loads(items_str) if items_str else []
+                        if isinstance(items_str, str) 
+                        else items_str # 이미 객체/리스트인 경우
+                    )(o.items) 
+                    if isinstance(o.items, str) 
+                       and o.items.strip().startswith(("{", "[")) 
+                       and o.items.strip().endswith(("}", "]"))
+                    else (
+                        [] # 문자열이 아니거나, 유효한 JSON 형태가 아닌 경우 기본값
+                    ),
+                    "total": float(o.total_amount) if o.total_amount else 0,
+                    "status": o.status,
+                    "date": o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else None
+                })(order)
                 for order in recent_orders
             ],
             "popularItems": [
@@ -138,7 +149,7 @@ def calculate_growth_rate(current: float, previous: float) -> float:
 async def get_order_analytics(
     start_date: Optional[str] = Query(None, description="시작 날짜 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="종료 날짜 (YYYY-MM-DD)"),
-    token: str = Depends(oauth2_scheme),
+    current_admin: Admin = Depends(get_current_active_admin),
     db: Session = Depends(get_db)
 ):
     """

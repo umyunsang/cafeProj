@@ -1,10 +1,10 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://116.124.191.174:15026/api/v1';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://116.124.191.174:15049/api';
 
 export const CONFIG = {
   site: {
-    name: 'Cafe Recommend',
-    description: '당신의 취향에 맞는 카페를 추천해드립니다.',
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'http://116.124.191.174:15022',
+    name: 'SipSmart',
+    description: 'AI와 함께하는 스마트 카페 경험',
+    url: 'http://116.124.191.174:15030',
   },
   api: {
     baseUrl: API_URL,

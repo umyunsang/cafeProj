@@ -26,6 +26,18 @@ class CartItem(CartItemBase):
     class Config:
         from_attributes = True
 
+class CartItemResponse(BaseModel):
+    id: int
+    menu_id: int
+    quantity: int
+    special_requests: Optional[str] = None
+    menu_name: str
+    menu_price: float
+    total_price: float
+
+    class Config:
+        from_attributes = True
+
 class CartBase(BaseModel):
     session_id: str
 
@@ -37,6 +49,21 @@ class Cart(CartBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     items: List[CartItem] = []
+
+    class Config:
+        from_attributes = True
+
+class CartWithItems(Cart):
+    items: List[CartItemResponse] = []
+
+    class Config:
+        from_attributes = True
+
+class CartSummaryResponse(BaseModel):
+    id: int
+    session_id: str
+    items_count: int
+    total_amount: float
 
     class Config:
         from_attributes = True 

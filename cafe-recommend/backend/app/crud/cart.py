@@ -15,7 +15,7 @@ def get_cart(db: Session, session_id: str) -> Optional[Cart]:
         cart = db.query(Cart).options(
             joinedload(Cart.items).joinedload(CartItem.menu)
         ).filter(Cart.session_id == session_id).first()
-        logger.info(f"Retrieved cart for session {session_id}: {cart.id if cart else 'None'}")
+        # logger.info(f"Retrieved cart for session {session_id}: {cart.id if cart else 'None'}") # get_or_create_cart 에서 로깅하므로 중복 제거
         return cart
     except SQLAlchemyError as e:
         logger.error(f"Database error while getting cart for session {session_id}: {str(e)}")
@@ -24,21 +24,31 @@ def get_cart(db: Session, session_id: str) -> Optional[Cart]:
         logger.error(f"Unexpected error while getting cart for session {session_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="장바구니를 불러오는 중 오류가 발생했습니다")
 
-def create_cart(db: Session, cart: CartCreate) -> Cart:
+def create_cart(db: Session, cart_data: CartCreate) -> Cart: # cart -> cart_data 로 변경
     try:
-        db_cart = Cart(session_id=cart.session_id)
+        # 생성 전 다시 한번 확인
+        existing_cart = db.query(Cart).filter(Cart.session_id == cart_data.session_id).first()
+        if existing_cart:
+            logger.info(f"Cart already exists for session {cart_data.session_id}, returning existing cart {existing_cart.id}")
+            # 완전한 cart 객체를 반환하기 위해 items와 menu를 로드할 수 있도록 get_cart 사용
+            return get_cart(db, cart_data.session_id) 
+
+        db_cart = Cart(session_id=cart_data.session_id)
         db.add(db_cart)
         db.commit()
         db.refresh(db_cart)
-        logger.info(f"Created new cart for session {cart.session_id}: {db_cart.id}")
-        return get_cart(db, cart.session_id)
+        logger.info(f"Created new cart for session {cart_data.session_id}: {db_cart.id}")
+        # 새로 생성된 cart도 items와 menu를 포함하여 반환
+        return get_cart(db, cart_data.session_id)
     except SQLAlchemyError as e:
         db.rollback()
-        logger.error(f"Database error while creating cart for session {cart.session_id}: {str(e)}")
+        logger.error(f"Database error while creating cart for session {cart_data.session_id}: {str(e)}")
+        # IntegrityError (UNIQUE constraint)는 여기서 잡아서 처리할 수도 있지만,
+        # 이미 위에서 existing_cart를 확인하므로 일반적인 SQLAlchemyError로 처리.
         raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다")
     except Exception as e:
         db.rollback()
-        logger.error(f"Unexpected error while creating cart for session {cart.session_id}: {str(e)}")
+        logger.error(f"Unexpected error while creating cart for session {cart_data.session_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="장바구니를 생성하는 중 오류가 발생했습니다")
 
 def get_or_create_cart(db: Session, session_id: str) -> Cart:

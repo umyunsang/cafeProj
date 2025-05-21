@@ -10,7 +10,8 @@ import {
   LogOut,
   Menu as MenuIcon,
   X,
-  LayoutDashboard
+  LayoutDashboard,
+  Settings
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -24,7 +25,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
+    const localToken = localStorage.getItem('adminToken');
+    const sessionToken = sessionStorage.getItem('adminToken');
+    const token = localToken || sessionToken;
+    
     if (!token) {
       router.push('/admin');
     } else {
@@ -34,6 +38,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
+    sessionStorage.removeItem('adminToken');
     router.push('/admin');
   };
 
@@ -91,6 +96,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           >
             <ShoppingCart size={20} />
             <span>주문 관리</span>
+          </Link>
+          <Link 
+            href="/admin/settings" 
+            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              pathname.startsWith('/admin/settings') 
+                ? 'bg-amber-50 text-amber-700 font-medium' 
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Settings size={20} />
+            <span>시스템 설정</span>
           </Link>
         </nav>
         <div className="p-4 border-t">

@@ -7,33 +7,62 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast, Toaster } from 'sonner';
 import { Coffee, Lock, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminLogin() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isDevelopment, setIsDevelopment] = useState(false); // 개발 환경 여부 상태
 
   useEffect(() => {
     setMounted(true);
-    // 이미 로그인된 경우 메뉴 관리 페이지로 리다이렉트
+    // NEXT_PUBLIC_NODE_ENV와 같은 공개 환경 변수를 사용하거나, 서버로부터 prop을 받는 것이 더 안전합니다.
+    // 여기서는 process.env.NODE_ENV를 직접 사용하지만, 실제 프로덕션에서는 주의가 필요합니다.
+    setIsDevelopment(process.env.NODE_ENV === 'development'); 
+    
     const token = localStorage.getItem('adminToken');
     if (token) {
       router.push('/admin/menus');
     }
   }, [router]);
 
+  const validateForm = () => {
+    if (!email.trim()) {
+      toast.error('이메일을 입력해주세요.');
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error('올바른 이메일 형식이 아닙니다.');
+      return false;
+    }
+    if (!password) { 
+      toast.error('비밀번호를 입력해주세요.');
+      return false;
+    }
+    if (password.length < 6) { 
+      toast.error('비밀번호는 최소 6자리 이상이어야 합니다.');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) { 
+      return;
+    }
     setIsLoading(true);
-
     try {
       const formData = new URLSearchParams();
       formData.append('username', email);
       formData.append('password', password);
 
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch('/api/admin/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -44,25 +73,29 @@ export default function AdminLogin() {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error('로그인 API를 찾을 수 없습니다.');
+          throw new Error('로그인 API 경로를 찾을 수 없습니다. 관리자에게 문의하세요.');
         }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || '로그인에 실패했습니다.');
+        const errorData = await response.json().catch(() => ({ detail: '응답 처리 중 오류가 발생했습니다.' }));
+        throw new Error(errorData.detail || '아이디 또는 비밀번호가 올바르지 않습니다.');
       }
 
       const data = await response.json();
       
-      // 토큰 저장
-      localStorage.setItem('adminToken', data.access_token);
-      
-      // 세션 스토리지에도 토큰 저장 (브라우저 세션 유지)
-      sessionStorage.setItem('adminToken', data.access_token);
-      
+      await login(data.access_token, { id: 'temp-user-id', email: email });
+
       toast.success('로그인 성공');
       router.push('/admin/menus');
     } catch (error) {
       console.error('로그인 실패:', error);
-      toast.error(error instanceof Error ? error.message : '로그인에 실패했습니다.');
+      let errorMessage = '로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          errorMessage = '서버에 연결할 수 없습니다. 네트워크 상태를 확인하거나 관리자에게 문의하세요.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -127,6 +160,29 @@ export default function AdminLogin() {
             {isLoading ? '로그인 중...' : '로그인'}
           </Button>
         </form>
+        
+        {isDevelopment && (
+          <div className="mt-6 p-4 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-500 mb-2">개발 환경 관리자 계정</h3>
+            <div className="space-y-1 text-xs">
+              <p className="flex items-center text-gray-700 dark:text-gray-300">
+                <Mail className="h-3 w-3 mr-1 text-gray-500" />
+                <span className="font-medium">이메일:</span>
+                <code className="ml-1 px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">admin@example.com</code>
+              </p>
+              <p className="flex items-center text-gray-700 dark:text-gray-300">
+                <Lock className="h-3 w-3 mr-1 text-gray-500" />
+                <span className="font-medium">비밀번호:</span>
+                <code className="ml-1 px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">admin1234</code>
+              </p>
+              <p className="flex items-center text-gray-700 dark:text-gray-300">
+                <Mail className="h-3 w-3 mr-1 text-gray-500" />
+                <span className="font-medium">대체 이메일:</span>
+                <code className="ml-1 px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">admin@test.com</code>
+              </p>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );

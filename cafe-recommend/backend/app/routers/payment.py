@@ -1,12 +1,16 @@
 from fastapi import APIRouter, HTTPException, Depends, Cookie, Header, Response, Query
 from sqlalchemy.orm import Session, joinedload
 from ..database import get_db
-from ..models.payment import PaymentConfig
+from ..models.payment_settings import PaymentSettings
 from ..models.order import Order, OrderItem
 from ..models.cart import Cart, CartItem
 from ..models.menu import Menu
-from ..schemas.payment import OrderRequest, PaymentRequest, KakaoPayRequest, OrderItemRequest as PaymentOrderItemRequest, OrderResponse
+from ..schemas.payment import (
+    OrderRequest, PaymentRequest, KakaoPayRequest, OrderItemRequest as PaymentOrderItemRequest, 
+    OrderResponse, RefundRequest, RefundResponse
+)
 from ..schemas.order import OrderCreate, OrderItemCreate
+from ..crud.order import create_order as crud_create_order
 import httpx
 import json
 from urllib.parse import urlencode
@@ -14,17 +18,45 @@ from typing import Optional, List
 import logging
 from ..core.config import settings
 import requests
-from datetime import datetime
-import pytz
-from ..crud.order import create_order as crud_create_order, get_order_by_number
-import uuid # 멱등성 키를 위해 추가
+from datetime import datetime, timezone, timedelta
+import uuid
 from fastapi.responses import RedirectResponse
 
-router = APIRouter()
+router = APIRouter(prefix="/payments")
 
 async def get_payment_config(provider: str, db: Session):
-    config = db.query(PaymentConfig).filter(PaymentConfig.provider == provider).first()
+    # 프로덕션/개발 환경 모두 DB 또는 설정 파일에서 실제 값 사용하도록 단순화 가능 (현재는 개발용 하드코딩 유지)
+    if settings.ENVIRONMENT == "development":
+        if provider == "kakaopay" or provider == "kakao":
+            return {
+                "provider": provider,
+                "is_active": True,
+                "secret_key": settings.KAKAO_SECRET_KEY_DEV, # KAKAO_ADMIN_KEY 대신 KAKAO_SECRET_KEY_DEV 사용
+                "additional_settings": {"cid": settings.KAKAO_CID}
+            }
+        # (네이버페이 등 다른 PG 설정 유지)
+        elif provider == "naver" or provider == "naverpay":
+             return {
+                "provider": "naverpay",
+                "is_active": True,
+                "client_id": settings.NAVER_PAY_CLIENT_ID,
+                "client_secret": "dev_secret_key", # 실제로는 네이버페이 Secret Key 사용
+                "additional_settings": {
+                    "partner_id": settings.NAVER_PAY_PARTNER_ID,
+                    "chain_id": settings.NAVER_PAY_CHAIN_ID
+                }
+            }
+    
+    # 프로덕션 환경에서는 DB에서 설정 조회 (이 부분은 그대로 유지)
+    config = db.query(PaymentSettings).filter(PaymentSettings.provider == provider).first()
     if not config or not config.is_active:
+        try:
+            from ..models.payment_settings import PaymentSettings
+            settings_config = db.query(PaymentSettings).filter(PaymentSettings.provider == provider).first()
+            if settings_config and settings_config.is_active:
+                return settings_config
+        except Exception as e:
+            logging.error(f"PaymentSettings 조회 중 오류: {str(e)}")
         raise HTTPException(status_code=400, detail=f"{provider} 결제가 설정되지 않았습니다.")
     return config
 
@@ -102,7 +134,7 @@ async def create_order_route(
         logging.error(f"예상치 못한 오류 발생: {str(e)}")
         raise HTTPException(status_code=500, detail=f"예상치 못한 오류가 발생했습니다: {str(e)}")
 
-@router.post("/payment/naver/prepare")
+@router.post("/naver/prepare")
 async def prepare_naver_payment(
     request: OrderRequest,
     response: Response,
@@ -244,7 +276,7 @@ async def prepare_naver_payment(
         logging.exception(f"네이버페이 준비 - SDK 파라미터 생성 중 예상치 못한 오류 발생 (Order ID: {created_order.id})")
         raise HTTPException(status_code=500, detail="결제 준비 중 오류 발생")
 
-@router.get("/payment/naver/callback")
+@router.get("/naver/callback")
 async def verify_and_approve_naver_payment(
     # 네이버페이 리다이렉션 쿼리 파라미터
     resultCode: Optional[str] = Query(None), 
@@ -352,8 +384,7 @@ async def verify_and_approve_naver_payment(
                     logging.info("네이버페이 결제 최종 승인 및 검증 성공.")
                     
                     # --- 주문 번호 생성 (paid 상태 업데이트 직전) ---
-                    seoul_tz = pytz.timezone('Asia/Seoul')
-                    today_str = datetime.now(seoul_tz).strftime('%Y%m%d')
+                    today_str = datetime.now(timezone(timedelta(hours=9))).strftime('%Y%m%d')
                     # 마지막 주문 조회 시 with_for_update() 추가 (동시성 제어 시도)
                     last_order_today = db.query(Order).filter(Order.order_number.like(f"{today_str}-%")).order_by(Order.order_number.desc()).with_for_update().first()
                     next_seq = 1
@@ -393,11 +424,6 @@ async def verify_and_approve_naver_payment(
                     # 문제 상황 -> 취소 또는 수동 확인 필요
                     # 예: await call_naver_cancel_api(paymentId, "검증 실패 (상태/금액 불일치)")
                     raise HTTPException(status_code=400, detail="결제 검증 실패 (상태 또는 금액 불일치)")
-            else:
-                 # 승인 API 자체가 실패한 경우 (위에서 처리됨, 여기 도달하면 로직 오류)
-                 error_message = approve_data.get("message") if approve_data else "승인 API 응답 오류"
-                 logging.error(f"네이버페이 결제 승인 실패 (code!=Success): {error_message}")
-                 raise HTTPException(status_code=400, detail=f"결제 승인에 실패했습니다: {error_message}")
 
     except httpx.HTTPStatusError as e:
         error_text = e.response.text
@@ -412,7 +438,7 @@ async def verify_and_approve_naver_payment(
         db.commit()
         raise HTTPException(status_code=500, detail=f"결제 승인 중 오류 발생: {str(verify_err)}")
 
-@router.post("/payment/kakao")
+@router.post("/kakao")
 async def process_kakao_payment(
     request: KakaoPayRequest,
     response: Response,
@@ -420,215 +446,219 @@ async def process_kakao_payment(
     x_session_id: Optional[str] = Header(None, alias="X-Session-ID"),
     db: Session = Depends(get_db)
 ):
-    """카카오페이 결제 처리 API"""
     effective_session_id = x_session_id or session_id
     if not effective_session_id:
         raise HTTPException(status_code=400, detail="세션 ID가 필요합니다.")
-    
-    # 세션 쿠키 설정
     set_session_cookie(response, effective_session_id)
     
-    config = await get_payment_config("kakao", db)
+    payment_provider_config = await get_payment_config("kakao", db)
+    if not payment_provider_config or not payment_provider_config.get("secret_key") or not payment_provider_config.get("additional_settings", {}).get("cid"):
+        raise HTTPException(status_code=500, detail="카카오페이 설정(Secret Key 또는 CID)이 누락되었습니다.")
     
-    # 주문 정보 조회
+    kakao_secret_key = payment_provider_config["secret_key"]
+    kakao_cid = payment_provider_config["additional_settings"]["cid"]
+
     try:
-        order_id = int(request.order_id)
+        order_id_int = int(request.order_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="잘못된 주문 ID 형식입니다.")
-        
-    order = db.query(Order).filter(Order.id == order_id).first()
+    order = db.query(Order).filter(Order.id == order_id_int).first()
     if not order:
         raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
-    
+
     try:
-        # 카카오페이 결제 요청
         async with httpx.AsyncClient() as client:
-            # 요청 데이터 준비
             request_data = {
-                "cid": "TC0ONETIME",  # 테스트용 CID
+                "cid": kakao_cid,
                 "partner_order_id": str(order.id),
                 "partner_user_id": effective_session_id,
                 "item_name": request.item_name,
                 "quantity": request.quantity,
-                "total_amount": str(request.total_amount),
-                "tax_free_amount": "0",
-                "approval_url": f"{settings.FRONTEND_URL}/payments/success?order_id={order.id}&tid=",
+                "total_amount": request.total_amount, # API 명세상 Integer, KakaoPayRequest는 int
+                "tax_free_amount": 0, # API 명세상 Integer
+                "approval_url": f"{settings.FRONTEND_URL}/payments/callback",
                 "cancel_url": f"{settings.FRONTEND_URL}/payments/cancel",
-                "fail_url": f"{settings.FRONTEND_URL}/payments/fail"
+                "fail_url": f"{settings.FRONTEND_URL}/payments/fail",
             }
+            # vat_amount는 자동 계산되도록 명시적으로 보내지 않음
             
-            logging.info(f"카카오페이 결제 요청 데이터: {request_data}")
+            logging.info(f"카카오페이 결제 준비 요청 데이터 (JSON): {request_data}")
             
-            # URL 인코딩된 데이터로 요청
-            encoded_data = urlencode(request_data)
-            
-            response = await client.post(
-                f"{settings.KAKAO_PAY_API_URL}/v1/payment/ready",
+            api_response = await client.post(
+                f"{settings.KAKAO_PAY_API_URL}/online/v1/payment/ready", # 새 API 엔드포인트
                 headers={
-                    "Authorization": f"KakaoAK {settings.KAKAO_ADMIN_KEY}",
-                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+                    "Authorization": f"SECRET_KEY {kakao_secret_key}", # 새 인증 방식
+                    "Content-Type": "application/json;charset=UTF-8"  # Content-Type 변경
                 },
-                content=encoded_data.encode('utf-8')
+                json=request_data # httpx는 json 파라미터로 dict를 바로 전달 가능
             )
             
-            if response.status_code == 200:
-                response_data = response.json()
-                # 응답 데이터 상세 로깅 추가
-                logging.info(f"카카오페이 결제 응답 원본: {response.text}") 
-                logging.info(f"파싱된 카카오페이 응답 데이터: {response_data}")
-                next_url = response_data.get("next_redirect_pc_url")
-                logging.info(f"수신된 next_redirect_pc_url: {next_url}")
-                
-                # 주문 정보 업데이트
+            if api_response.status_code == 200:
+                response_data = api_response.json()
+                logging.info(f"카카오페이 결제 준비 응답 원본: {api_response.text}")
+                logging.info(f"파싱된 카카오페이 결제 준비 응답 데이터: {response_data}")
                 tid = response_data.get("tid")
                 if not tid:
                     logging.error("카카오페이 응답에 tid가 없습니다.")
                     raise HTTPException(status_code=500, detail="카카오페이 처리 중 오류 발생: tid 누락")
-                
-                order.payment_key = tid
+                order.payment_key = tid # tid를 주문 정보에 저장
                 db.commit()
-                
-                # 카카오페이 API 응답 형식 그대로 반환
-                return response_data
+                # next_redirect_pc_url 등 필요한 정보를 클라이언트에 반환
+                return {
+                    "tid": tid,
+                    "next_redirect_pc_url": response_data.get("next_redirect_pc_url"),
+                    "next_redirect_mobile_url": response_data.get("next_redirect_mobile_url"),
+                    "next_redirect_app_url": response_data.get("next_redirect_app_url"),
+                    "android_app_scheme": response_data.get("android_app_scheme"),
+                    "ios_app_scheme": response_data.get("ios_app_scheme"),
+                    "created_at": response_data.get("created_at")
+                }
             else:
-                error_response = response.json()
-                logging.error(f"카카오페이 결제 요청 실패: {error_response}")
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"카카오페이 결제 요청 실패: {error_response}"
-                )
-                
-    except Exception as e:
-        logging.error(f"카카오페이 결제 요청 중 오류: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+                error_response_text = api_response.text
+                try:
+                    error_details = api_response.json()
+                except json.JSONDecodeError:
+                    error_details = {"raw_response": error_response_text}
+                logging.error(f"카카오페이 결제 준비 요청 실패 ({api_response.status_code}): {error_details}")
+                # API 문서의 오류 응답 형식에 맞춰서 메시지 추출
+                detail_msg = f"카카오페이 결제 준비 실패: {error_details.get('error_message', error_details.get('msg', error_details))}"
+                if 'error_code' in error_details:
+                     detail_msg += f" (코드: {error_details['error_code']})"
+                elif 'code' in error_details: # 이전 형식 호환
+                     detail_msg += f" (코드: {error_details['code']})"
 
-@router.post("/payment/kakao/complete")
+                raise HTTPException(
+                    status_code=api_response.status_code,
+                    detail=detail_msg
+                )
+    except httpx.RequestError as exc:
+        logging.error(f"카카오페이 API 요청 중 네트워크 오류: {exc}")
+        raise HTTPException(status_code=503, detail="카카오페이 서비스와 통신 중 오류가 발생했습니다.")
+    except Exception as e:
+        logging.exception(f"카카오페이 처리 중 예상치 못한 서버 내부 오류 (order_id: {order.id if order else 'unknown'}): {str(e)}")
+        raise HTTPException(status_code=500, detail=f"서버 내부 오류: {str(e)}")
+
+@router.post("/kakao/complete")
 async def complete_kakao_payment(
     tid: str = Query(...),
     pg_token: str = Query(...),
-    order_id: int = Query(...),
+    order_id: int = Query(...), # 프론트에서 order_id도 함께 전달
     db: Session = Depends(get_db)
 ):
-    """카카오페이 결제 완료 처리 및 주문 정보 반환"""
-    config = await get_payment_config("kakao", db)
+    payment_provider_config = await get_payment_config("kakao", db)
+    if not payment_provider_config or not payment_provider_config.get("secret_key") or not payment_provider_config.get("additional_settings", {}).get("cid"):
+        raise HTTPException(status_code=500, detail="카카오페이 설정(Secret Key 또는 CID)이 누락되었습니다.")
     
-    # 주문 정보 조회 (order_number 포함)
+    kakao_secret_key = payment_provider_config["secret_key"]
+    kakao_cid = payment_provider_config["additional_settings"]["cid"]
+    
     db_order = db.query(Order).options(
-        joinedload(Order.order_items).joinedload(OrderItem.menu) # 아이템 정보 로드
+        joinedload(Order.order_items).joinedload(OrderItem.menu)
     ).filter(Order.id == order_id).first()
     
     if not db_order:
         raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
         
+    # TID 일치 여부 확인 (결제 준비 시 저장한 payment_key와 일치해야 함)
     if db_order.payment_key != tid:
-         logging.warning(f"TID 불일치: 요청 TID={tid}, 주문 TID={db_order.payment_key}")
-         # 실제로는 더 엄격한 오류 처리가 필요할 수 있음
-         raise HTTPException(status_code=400, detail="결제 정보가 일치하지 않습니다.")
+         logging.warning(f"TID 불일치: 요청 TID={tid}, DB 주문 TID={db_order.payment_key} (Order ID: {order_id})")
+         raise HTTPException(status_code=400, detail="결제 정보(TID)가 일치하지 않습니다.")
 
-    # 카카오페이 결제 승인 요청
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{settings.KAKAO_PAY_API_URL}/v1/payment/approve",
+            approve_request_data = {
+                "cid": kakao_cid,
+                "tid": tid,
+                "partner_order_id": str(db_order.id),
+                "partner_user_id": db_order.session_id, # 결제 준비 시 사용한 partner_user_id와 동일해야 함
+                "pg_token": pg_token
+                # total_amount는 새 API 명세에서 선택사항이며, 없으면 tid 기준으로 처리
+            }
+            logging.info(f"카카오페이 결제 승인 요청 데이터 (JSON): {approve_request_data}")
+            
+            api_response = await client.post(
+                f"{settings.KAKAO_PAY_API_URL}/online/v1/payment/approve", # 새 API 엔드포인트
                 headers={
-                    "Authorization": f"KakaoAK {settings.KAKAO_ADMIN_KEY}",
-                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+                    "Authorization": f"SECRET_KEY {kakao_secret_key}", # 새 인증 방식
+                    "Content-Type": "application/json;charset=UTF-8"  # Content-Type 변경
                 },
-                data={
-                    "cid": "TC0ONETIME",
-                    "tid": tid,
-                    "partner_order_id": str(db_order.id), # 문자열로 변환
-                    "partner_user_id": db_order.session_id, # 주문에 저장된 세션 ID 사용
-                    "pg_token": pg_token
-                }
+                json=approve_request_data # httpx는 json 파라미터로 dict를 바로 전달 가능
             )
             
-            approval_data = response.json()
-            logging.info(f"카카오페이 결제 승인 응답: {approval_data}")
+            approval_data = api_response.json()
+            logging.info(f"카카오페이 결제 승인 응답 ({api_response.status_code}): {approval_data}")
             
-            if response.status_code != 200:
+            if api_response.status_code != 200:
                 logging.error(f"카카오페이 결제 승인 실패: {approval_data}")
-                # 주문 상태를 'failed' 등으로 업데이트하는 로직 추가 고려
                 db_order.status = "payment_failed"
                 db.commit()
-                raise HTTPException(status_code=400, detail=f"카카오페이 결제 승인 실패: {approval_data.get('msg', 'Unknown error')}")
+                # API 문서의 오류 응답 형식에 맞춰서 메시지 추출
+                detail_msg = f"카카오페이 결제 승인 실패: {approval_data.get('error_message', approval_data.get('msg', approval_data))}"
+                if 'error_code' in approval_data:
+                     detail_msg += f" (코드: {approval_data['error_code']})"
+                elif 'code' in approval_data: # 이전 형식 호환
+                     detail_msg += f" (코드: {approval_data['code']})"
 
-            # --- 주문 번호 생성 (paid 상태 업데이트 직전) ---
-            seoul_tz = pytz.timezone('Asia/Seoul')
-            today_str = datetime.now(seoul_tz).strftime('%Y%m%d')
-            # 마지막 주문 조회 시 with_for_update() 추가 (동시성 제어 시도)
-            last_order_today = db.query(Order).filter(Order.order_number.like(f"{today_str}-%")).order_by(Order.order_number.desc()).with_for_update().first()
-            next_seq = 1
-            if last_order_today and last_order_today.order_number:
-                try:
-                    last_seq = int(last_order_today.order_number.split('-')[-1])
-                    next_seq = last_seq + 1
-                except (ValueError, IndexError):
-                    logging.warning(f"이전 주문 번호 형식 오류: {last_order_today.order_number}")
-                    pass
-            new_order_number = f"{today_str}-{next_seq:03d}"
-            db_order.order_number = new_order_number # 변수명 db_order 사용
-            logging.info(f"새 주문 번호 생성: {new_order_number}")
-            # --- 주문 번호 생성 끝 ---
-            
-            # 주문 상태 업데이트 (예: paid)
-            db_order.status = "paid"
-            # 필요 시 카카오페이 응답에서 추가 정보 저장 (예: aid)
-            # db_order.payment_details = approval_data 
-            db.commit()
-            db.refresh(db_order) # 업데이트된 정보 로드
-            logging.info(f"주문 ID {order_id} 상태 'paid'로 업데이트 완료")
-            
-            # --- 응답 객체 생성 --- 
-            # OrderItem 정보를 OrderItemResponse 스키마에 맞게 변환 (별도 리스트로)
-            order_items_data = [
-                {
-                    "id": item.id,
-                    "menu_id": item.menu_id,
-                    "menu_name": item.menu.name if item.menu else "알 수 없음",
-                    "quantity": item.quantity,
-                    "unit_price": item.unit_price,
-                    "total_price": item.total_price
-                } 
-                for item in db_order.order_items
-            ]
-            
-            # 최종적으로 반환할 OrderResponse 객체 생성 (스키마 직접 사용)
-            final_order_response = OrderResponse(
-                id=db_order.id,
-                order_number=db_order.order_number,
-                user_id=db_order.user_id,
-                total_amount=db_order.total_amount,
-                status=db_order.status,
-                payment_method=db_order.payment_method,
-                payment_key=db_order.payment_key,
-                session_id=db_order.session_id,
-                delivery_address=db_order.delivery_address,
-                delivery_request=db_order.delivery_request,
-                phone_number=db_order.phone_number,
-                created_at=db_order.created_at.isoformat() if db_order.created_at else None,
-                updated_at=db_order.updated_at.isoformat() if db_order.updated_at else None,
-                items=order_items_data # 변환된 아이템 데이터 사용
-            )
+                raise HTTPException(
+                    status_code=api_response.status_code,
+                    detail=detail_msg
+                )
 
-            # 성공 응답 반환 (스키마 객체를 dict로 변환하여 전달)
-            # Pydantic v1: .dict(), Pydantic v2: .model_dump()
-            # 프로젝트의 Pydantic 버전에 맞춰 사용해야 함 (v2 가정)
-            return {"status": "success", "message": "결제가 성공적으로 완료되었습니다.", "order": final_order_response.model_dump()}
+        # --- 주문 번호 생성 (paid 상태 업데이트 직전) ---
+        today_str = datetime.now(timezone(timedelta(hours=9))).strftime('%Y%m%d')
+        last_order_today = db.query(Order).filter(Order.order_number.like(f"{today_str}-%")).order_by(Order.order_number.desc()).with_for_update().first()
+        next_seq = 1
+        if last_order_today and last_order_today.order_number:
+            try:
+                last_seq = int(last_order_today.order_number.split('-')[-1])
+                next_seq = last_seq + 1
+            except (ValueError, IndexError):
+                logging.warning(f"이전 주문 번호 형식 오류: {last_order_today.order_number}")
+                pass
+        new_order_number = f"{today_str}-{next_seq:03d}"
+        db_order.order_number = new_order_number
+        logging.info(f"새 주문 번호 생성: {new_order_number}")
+        # --- 주문 번호 생성 끝 ---
+        
+        db_order.status = "paid"
+        # 카카오페이 응답의 aid (승인번호) 등 필요 정보 저장 가능
+        # db_order.payment_details = json.dumps(payment_detail, ensure_ascii=False) 
+        db.commit()
+        db.refresh(db_order)
+        logging.info(f"주문 ID {order_id} 상태 'paid'로 업데이트 완료, 결제 승인 데이터: {approval_data}")
+        
+        order_items_data = [
+            {
+                "id": item.id, "menu_id": item.menu_id,
+                "menu_name": item.menu.name if item.menu else "알 수 없음",
+                "quantity": item.quantity, "unit_price": item.unit_price,
+                "total_price": item.total_price
+            } for item in db_order.order_items
+        ]
+        
+        final_order_response = OrderResponse(
+            id=db_order.id, order_number=db_order.order_number, user_id=db_order.user_id,
+            total_amount=db_order.total_amount, status=db_order.status,
+            payment_method=db_order.payment_method, payment_key=db_order.payment_key,
+            session_id=db_order.session_id, delivery_address=db_order.delivery_address,
+            delivery_request=db_order.delivery_request, phone_number=db_order.phone_number,
+            created_at=db_order.created_at, updated_at=db_order.updated_at,
+            items=order_items_data
+        )
+        return {"status": "success", "message": "결제가 성공적으로 완료되었습니다.", "order": final_order_response.model_dump()}
 
+    except httpx.RequestError as exc:
+        logging.error(f"카카오페이 결제 승인 API 요청 중 네트워크 오류: {exc}")
+        db_order.status = "payment_failed"
+        db.commit()
+        raise HTTPException(status_code=503, detail="카카오페이 서비스와 통신 중 오류가 발생했습니다.")
     except Exception as e:
-        db.rollback() # 오류 발생 시 롤백
-        logging.exception(f"카카오페이 결제 완료 처리 중 오류 발생 (Order ID: {order_id}): {str(e)}")
-        # 주문 상태를 'failed' 등으로 업데이트하는 로직 추가 고려
-        try:
-            fail_order = db.query(Order).filter(Order.id == order_id).first()
-            if fail_order and fail_order.status == "pending":
-                fail_order.status = "payment_failed"
-                db.commit()
-        except Exception as db_err:
-             logging.error(f"주문 상태 업데이트 실패 (Order ID: {order_id}): {db_err}")
-             
-        raise HTTPException(status_code=500, detail=f"결제 완료 처리 중 오류 발생: {str(e)}")
+        db.rollback()
+        logging.exception(f"카카오페이 결제 완료 처리 중 예상치 못한 서버 내부 오류 (Order ID: {order_id}): {str(e)}")
+        if db_order and db_order.status == "pending": # 아직 paid로 변경 전이면
+            db_order.status = "payment_failed"
+            db.commit()
+        raise HTTPException(status_code=500, detail=f"서버 내부 오류: {str(e)}")
 
 @router.get("/orders/{order_id}", response_model=OrderResponse)
 async def get_order(
@@ -823,7 +853,7 @@ async def cancel_naver_payment(order_id: int, db: Session = Depends(get_db)):
         # 401 Unauthorized 등 특정 상태 코드 처리 강화 가능
         if e.response.status_code == 401:
              raise HTTPException(status_code=401, detail="Naver Pay authorization failed. Check Client ID/Secret.")
-        raise HTTPException(status_code=e.response.status_code, detail=f"Failed to communicate with Naver Pay cancel API: Status {e.response.status_code}, Response: {error_body}")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Failed to communicate with Naver Pay cancel API: Status {e.response.status_code}")
     except Exception as e:
         # 기타 예외
         logging.exception(f"An unexpected error occurred during Naver Pay cancellation for Order {order.id}")
@@ -836,50 +866,47 @@ async def cancel_kakao_payment(order_id: int, db: Session = Depends(get_db)) -> 
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # 카카오페이 tid (결제 준비 시 payment_key에 저장됨) 확인
     if not order.payment_key or order.payment_method != "kakao":
         raise HTTPException(status_code=400, detail="Kakao Pay TID (payment_key) not found or invalid payment method for this order")
 
-    # 상태 확인
     if order.status == "CANCELLED":
         raise HTTPException(status_code=400, detail="Order already cancelled")
-    if order.status != "paid": # 'paid' 상태일 때만 취소 가능하도록 제한 (정책에 따라 조정)
+    if order.status != "paid":
         logging.warning(f"Kakao Pay cancellation attempt on order {order_id} with status {order.status}")
         raise HTTPException(status_code=400, detail=f"Order status '{order.status}' cannot be cancelled. Only 'paid' orders can be cancelled.")
 
-    # 카카오페이 설정 확인
-    if not settings.KAKAO_PAY_API_URL or not settings.KAKAO_ADMIN_KEY:
-        logging.error("Kakao Pay configuration missing in settings.")
-        raise HTTPException(status_code=500, detail="Kakao Pay configuration is incomplete.")
+    payment_provider_config = await get_payment_config("kakao", db)
+    if not payment_provider_config or not payment_provider_config.get("secret_key") or not payment_provider_config.get("additional_settings", {}).get("cid"):
+        raise HTTPException(status_code=500, detail="카카오페이 설정(Secret Key 또는 CID)이 누락되었습니다.")
 
-    # 카카오페이 취소 API URL
-    cancel_url = f"{settings.KAKAO_PAY_API_URL}/v1/payment/cancel"
+    kakao_secret_key = payment_provider_config["secret_key"]
+    kakao_cid = payment_provider_config["additional_settings"]["cid"]
+
+    # 카카오페이 취소 API URL (기존과 동일하나, open-api로 변경된 KAKAO_PAY_API_URL 사용)
+    # 새 API 문서에서는 /online/v1/payment/cancel 로 명시됨
+    cancel_url = f"{settings.KAKAO_PAY_API_URL}/online/v1/payment/cancel"
 
     headers = {
-        "Authorization": f"KakaoAK {settings.KAKAO_ADMIN_KEY}",
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        "Authorization": f"SECRET_KEY {kakao_secret_key}",
+        "Content-Type": "application/json;charset=UTF-8"
     }
 
-    # 요청 데이터 (전체 금액 취소 가정)
     payload = {
-        "cid": "TC0ONETIME",  # 테스트 CID, 실제 서비스 시 발급받은 CID 사용
+        "cid": kakao_cid,
         "tid": order.payment_key,
-        "cancel_amount": int(order.total_amount), # 취소 금액 (정수)
-        "cancel_tax_free_amount": 0 # 비과세 금액 (0으로 가정)
-        # 필요시 "cancel_vat_amount": 부가세 금액 추가 (cancel_amount의 1/11)
-        # 필요시 "payload": 사용자 정의 데이터 추가
+        "cancel_amount": int(order.total_amount),
+        "cancel_tax_free_amount": 0
+        # "payload": "사용자 요청 취소" # 필요시 추가
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client: # 카카오페이는 보통 30초
+        async with httpx.AsyncClient(timeout=30.0) as client:
             logging.info(f"--- Kakao Pay Cancel Request ---")
             logging.info(f"URL: {cancel_url}")
             logging.info(f"Headers: {headers}")
-            # form-urlencoded 데이터는 문자열로 로깅하는 것이 더 명확할 수 있음
-            encoded_payload = urlencode(payload)
-            logging.info(f"Payload (encoded): {encoded_payload}")
+            logging.info(f"Payload (JSON): {payload}")
             
-            response = await client.post(cancel_url, headers=headers, data=payload)
+            response = await client.post(cancel_url, headers=headers, json=payload)
             
             try:
                 cancel_data = response.json()
@@ -888,24 +915,21 @@ async def cancel_kakao_payment(order_id: int, db: Session = Depends(get_db)) -> 
             except json.JSONDecodeError:
                 logging.error(f"Kakao Pay Cancel Response: Failed to decode JSON (Status: {response.status_code}). Body: {response.text}")
                 cancel_data = None
-                
-            # 응답 상태 코드 확인
-            response.raise_for_status() # 200 외 상태 코드 시 예외 발생
             
-            # 카카오페이 취소 성공 응답 확인 (응답 본문의 status 필드 등 확인 필요 - API 문서 기준)
-            # 예시: 카카오페이 취소 성공 시 응답에 "status": "CANCEL_PAYMENT" 등이 포함될 수 있음
-            if cancel_data and cancel_data.get("status") == "CANCEL_PAYMENT":
-                cancelled_amount = cancel_data.get("canceled_amount", {}).get("total", 0)
-                # 필요시 취소 금액 검증: if cancelled_amount != int(order.total_amount):
+            response.raise_for_status() 
+            
+            # 카카오페이 취소 성공 응답 확인 (새 API 문서 기준 응답 확인 필요)
+            # 문서 샘플에는 성공 응답 예시가 없으나, 일반적으로 status 또는 특정 필드로 성공 여부 판단
+            # 여기서는 HTTP 200 이고, 응답 바디에 error가 없으면 성공으로 간주 (추후 API 문서 확인 후 보강)
+            if response.status_code == 200 and cancel_data and not cancel_data.get("error_code") and not cancel_data.get("code"): # 'code'는 혹시 모를 이전 형식
+                cancelled_amount_info = cancel_data.get("canceled_amount", {})
+                cancelled_total = cancelled_amount_info.get("total", 0)
                 
                 order.status = "CANCELLED"
-                # 필요시 취소 관련 정보 저장
-                # order.cancel_details = json.dumps(cancel_data, ensure_ascii=False)
                 db.commit()
                 db.refresh(order)
-                logging.info(f"Order {order.id} cancelled successfully via Kakao Pay. Cancelled Amount: {cancelled_amount}")
+                logging.info(f"Order {order.id} cancelled successfully. Kakao Pay Cancelled Amount: {cancelled_total}")
                 
-                # OrderResponse 반환 (네이버페이 취소와 동일한 형식)
                 return OrderResponse(
                     id=order.id,
                     order_number=order.order_number,
@@ -917,7 +941,7 @@ async def cancel_kakao_payment(order_id: int, db: Session = Depends(get_db)) -> 
                     session_id=order.session_id,
                     created_at=order.created_at,
                     updated_at=order.updated_at,
-                    items=[] # items는 로드 안함
+                    items=[] # items는 여기서 로드 안함
                 )
             else:
                 # 카카오페이 API에서 취소 실패 응답을 준 경우
@@ -936,7 +960,7 @@ async def cancel_kakao_payment(order_id: int, db: Session = Depends(get_db)) -> 
         except Exception:
             pass
         logging.error(f"HTTP error calling Kakao Pay cancel API for Order {order.id}: {e.response.status_code} - {error_body}")
-        # 401 등 특정 오류 처리
+        # 401 Unauthorized 등 특정 오류 처리
         if e.response.status_code == 401:
             raise HTTPException(status_code=401, detail="Kakao Pay authorization failed.")
         raise HTTPException(status_code=e.response.status_code, detail=f"Failed to communicate with Kakao Pay cancel API: Status {e.response.status_code}")
@@ -944,3 +968,154 @@ async def cancel_kakao_payment(order_id: int, db: Session = Depends(get_db)) -> 
         # 기타 예외
         logging.exception(f"An unexpected error occurred during Kakao Pay cancellation for Order {order.id}")
         raise HTTPException(status_code=500, detail=f"An internal server error occurred during Kakao Pay cancellation: {str(e)}") 
+
+@router.post("/refund", response_model=RefundResponse)
+async def refund_payment(
+    request: RefundRequest,
+    db: Session = Depends(get_db)
+):
+    """주문 환불 엔드포인트 - 결제 방식에 따라 적절한 환불 프로세스 실행"""
+    try:
+        # 1. 주문 조회
+        order = db.query(Order).filter(Order.id == request.order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
+        
+        # 2. 이미 환불된 주문인지 확인
+        if order.is_refunded:
+            raise HTTPException(status_code=400, detail="이미 환불 처리된 주문입니다.")
+        
+        # 3. 결제 방식에 따라 환불 로직 분기
+        refund_id = str(uuid.uuid4())
+        refund_amount = request.refund_amount or order.total_amount
+        
+        if order.payment_method == "kakao":
+            # 카카오페이 환불 처리
+            refund_result = await refund_kakao_payment(order, refund_amount, refund_id, db)
+        elif order.payment_method == "naver":
+            # 네이버페이 환불 처리
+            refund_result = await refund_naver_payment(order, refund_amount, refund_id, db)
+        else:
+            raise HTTPException(status_code=400, detail=f"지원하지 않는 결제 방식입니다: {order.payment_method}")
+        
+        # 4. 환불 결과 업데이트
+        now = datetime.now(timezone(timedelta(hours=9)))
+        order.is_refunded = True
+        order.refund_amount = refund_amount
+        order.refund_reason = request.reason
+        order.refund_id = refund_id
+        order.refunded_at = now
+        order.status = "refunded"
+        db.commit()
+        
+        # 5. 주문 상세 정보 반환
+        return RefundResponse(
+            order_id=order.id,
+            refund_id=refund_id,
+            amount=refund_amount,
+            status="completed",
+            payment_method=order.payment_method,
+            refunded_at=now
+        )
+        
+    except HTTPException as e:
+        # HTTP 예외는 그대로 전달
+        raise
+    except Exception as e:
+        logging.error(f"환불 처리 중 오류 발생: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"환불 처리 중 오류가 발생했습니다: {str(e)}")
+
+async def refund_kakao_payment(order, refund_amount, refund_id, db):
+    """카카오페이 환불 처리 함수 - cancel_kakao_payment 함수를 재사용하거나 유사 로직 구성"""
+    # 현재 카카오페이 API 문서는 '결제 취소'만 제공하고 '환불'은 별도 엔드포인트가 없음.
+    # 일반적으로 '취소'가 '환불'과 동일한 역할을 함.
+    # cancel_kakao_payment는 전체 취소이므로, 부분 환불(취소)이 필요하면 해당 함수 수정 또는 새 함수 필요.
+    # 여기서는 전체 취소와 동일하게 처리 (cancel_kakao_payment 호출로 단순화 가능하나, 중복 호출 방지 위해 로직 통합)
+    
+    payment_provider_config = await get_payment_config("kakao", db)
+    if not payment_provider_config or not payment_provider_config.get("secret_key") or not payment_provider_config.get("additional_settings", {}).get("cid"):
+        raise HTTPException(status_code=500, detail="카카오페이 설정(Secret Key 또는 CID)이 누락되었습니다.")
+
+    kakao_secret_key = payment_provider_config["secret_key"]
+    kakao_cid = payment_provider_config["additional_settings"]["cid"]
+
+    # 카카오페이 취소(환불) API URL
+    cancel_url = f"{settings.KAKAO_PAY_API_URL}/online/v1/payment/cancel"
+
+    headers = {
+        "Authorization": f"SECRET_KEY {kakao_secret_key}",
+        "Content-Type": "application/json;charset=UTF-8"
+    }
+    
+    # 환불 요청 데이터 설정
+    # KakaoPayRequest의 total_amount는 int, API 명세도 Integer
+    refund_data = {
+        "cid": kakao_cid,
+        "tid": order.payment_key,
+        "cancel_amount": int(refund_amount), # 환불(취소) 금액
+        "cancel_tax_free_amount": 0, # 환불(취소) 비과세 금액
+        # "payload": f"Refund ID: {refund_id}" # 필요 시 추가
+    }
+    
+    logging.info(f"카카오페이 환불(취소) 요청: URL={cancel_url}, Payload={refund_data}")
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(cancel_url, headers=headers, json=refund_data)
+            response_data = response.json()
+            logging.info(f"카카오페이 환불(취소) 응답 ({response.status_code}): {response_data}")
+            
+        if response.status_code != 200 or (response_data.get("error_code") or response_data.get("code")):
+            error_msg = response_data.get('error_message', response_data.get('msg', '알 수 없는 오류'))
+            logging.error(f"카카오페이 환불(취소) 실패: {error_msg}")
+            raise HTTPException(status_code=400, detail=f"카카오페이 환불(취소) 실패: {error_msg}")
+            
+        # 성공 시, 취소(환불)된 금액 등의 정보를 반환할 수 있음
+        return response_data
+        
+    except httpx.RequestError as e:
+        logging.error(f"카카오페이 환불(취소) API 요청 중 네트워크 오류: {str(e)}")
+        raise HTTPException(status_code=503, detail=f"카카오페이 서비스 통신 중 오류가 발생했습니다: {str(e)}")
+    except Exception as e:
+        logging.error(f"카카오페이 환불(취소) 처리 중 오류: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"카카오페이 환불(취소) 처리 중 오류: {str(e)}")
+
+async def refund_naver_payment(order, refund_amount, refund_id, db):
+    """네이버페이 환불 처리 함수"""
+    try:
+        # 네이버페이 설정 가져오기
+        config = await get_payment_config("naver", db)
+        
+        # 네이버페이 환불 API URL (가정)
+        refund_url = "https://dev.apis.naver.com/naverpay-partner/naverpay/payments/v2.2/cancel"
+        
+        # 환불 요청 헤더 설정
+        headers = {
+            "X-Naver-Client-Id": config.client_id,
+            "X-Naver-Client-Secret": config.client_secret,
+            "Content-Type": "application/json"
+        }
+        
+        # 환불 요청 데이터 설정
+        refund_data = {
+            "paymentId": order.payment_key,  # 네이버페이 결제 ID
+            "cancelAmount": refund_amount,  # 환불 금액
+            "cancelReason": order.refund_reason or "고객 요청으로 인한 환불",
+            "cancelRequester": "admin"  # 요청자 (관리자)
+        }
+        
+        # 환불 요청 보내기
+        async with httpx.AsyncClient() as client:
+            response = await client.post(refund_url, headers=headers, json=refund_data)
+            response_data = response.json()
+            
+        # 응답 검증
+        if response.status_code != 200:
+            logging.error(f"네이버페이 환불 실패: {response_data}")
+            raise HTTPException(status_code=400, detail=f"네이버페이 환불 실패: {response_data.get('message', '알 수 없는 오류')}")
+            
+        return response_data
+        
+    except Exception as e:
+        logging.error(f"네이버페이 환불 처리 중 오류: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"네이버페이 환불 처리 중 오류: {str(e)}") 

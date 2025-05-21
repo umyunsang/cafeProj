@@ -12,6 +12,9 @@ interface Menu {
   category: string;
 }
 
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://116.124.191.174:15049';
+
 export function MenuList() {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [cart, setCart] = useState<any>(null);
@@ -25,7 +28,7 @@ export function MenuList() {
 
   const fetchMenus = async () => {
     try {
-      const response = await fetch('http://localhost:15026/api/menus');
+      const response = await fetch(`${API_BASE_URL}/api/menus`);
       const data = await response.json();
       setMenus(data);
     } catch (error) {
@@ -37,7 +40,7 @@ export function MenuList() {
 
   const fetchCart = async () => {
     try {
-      const response = await fetch('http://localhost:15026/api/cart');
+      const response = await fetch(`${API_BASE_URL}/api/cart`);
       const data = await response.json();
       setCart(data);
     } catch (error) {
@@ -47,7 +50,7 @@ export function MenuList() {
 
   const handleAddToCart = async (menuId: number, quantity: number) => {
     try {
-      await fetch('http://localhost:15026/api/cart/items', {
+      await fetch(`${API_BASE_URL}/api/cart/items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +66,7 @@ export function MenuList() {
 
   const handleUpdateQuantity = async (itemId: number, quantity: number) => {
     try {
-      await fetch(`http://localhost:15026/api/cart/items/${itemId}`, {
+      await fetch(`${API_BASE_URL}/api/cart/items/${itemId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +81,7 @@ export function MenuList() {
 
   const handleRemoveItem = async (itemId: number) => {
     try {
-      await fetch(`http://localhost:15026/api/cart/items/${itemId}`, {
+      await fetch(`${API_BASE_URL}/api/cart/items/${itemId}`, {
         method: 'DELETE',
       });
       fetchCart();

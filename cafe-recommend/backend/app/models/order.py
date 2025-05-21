@@ -1,13 +1,13 @@
 from typing import TYPE_CHECKING
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Enum, JSON
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Enum, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
 
-from app.db.base_class import Base
+from app.database import Base
 
 if TYPE_CHECKING:
-    from .menu import Menu  # noqa: F401
+    from .menu import MenuItem  # noqa: F401
     from .user import User  # noqa: F401
 
 class OrderItem(Base):
@@ -24,7 +24,7 @@ class OrderItem(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     order = relationship("Order", back_populates="order_items")
-    menu = relationship("Menu", back_populates="order_items")
+    menu = relationship("app.models.menu.MenuItem", back_populates="order_items")
 
 class Order(Base):
     __tablename__ = "orders"
@@ -33,7 +33,7 @@ class Order(Base):
     order_number = Column(String, unique=True, index=True, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 비회원 주문 허용
     total_amount = Column(Float, default=0.0)
-    status = Column(String, default="pending")  # pending, paid, completed, cancelled
+    status = Column(String, default="pending")  # pending, paid, completed, cancelled, refunded
     payment_method = Column(String, nullable=True)
     payment_key = Column(String, nullable=True)  # 결제 고유 번호 (tid)
     session_id = Column(String, nullable=True)  # 비회원 주문 추적용
@@ -48,6 +48,13 @@ class Order(Base):
     created_at = Column(DateTime(timezone=True), index=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
+    # 환불 관련 필드 추가
+    is_refunded = Column(Boolean, default=False)  # 환불 여부
+    refund_amount = Column(Float, nullable=True)  # 환불 금액
+    refund_reason = Column(String, nullable=True)  # 환불 사유
+    refund_id = Column(String, nullable=True)  # 환불 처리 ID
+    refunded_at = Column(DateTime(timezone=True), nullable=True)  # 환불 처리 시간
+    
     # 관계 설정
-    user = relationship("User", back_populates="orders")
+    user = relationship("app.models.user.User", back_populates="orders")
     order_items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan") 

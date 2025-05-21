@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from "next/link";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { CONFIG } from "@/config";
 import { CartProvider } from '@/contexts/CartContext';
-import { CartModal } from '@/components/cart/CartModal';
-import { CartButton } from '@/components/cart/CartButton';
+import { UserProvider } from '@/contexts/user-context';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from 'sonner';
+import { AdminHeader } from '@/components/layout/AdminHeader';
+import { UserHeader } from '@/components/layout/UserHeader';
+import { AdminFooter } from '@/components/layout/AdminFooter';
+import { UserFooter } from '@/components/layout/UserFooter';
 
 declare global {
   interface Window {
@@ -16,148 +21,97 @@ declare global {
 }
 
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const isAdminRoute = pathname?.startsWith('/admin');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+      if (storedTheme) return storedTheme;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+  });
 
   useEffect(() => {
-    const naverPaySdkUrl = 'https://nsp.pay.naver.com/sdk/js/naverpay.min.js';
-
-    if (document.querySelector(`script[src="${naverPaySdkUrl}"]`)) {
-      if (window.naverPayInstance) {
-        console.log('Naver Pay SDK 이미 로드 및 초기화됨.');
-        return;
-      }
-      console.log('Naver Pay SDK 스크립트는 로드됨. 초기화 재시도...');
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
+  }, [theme]);
 
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
+
+  useEffect(() => {
+    if (isAdminRoute || window.naverPayInstance) return;
+    const naverPaySdkUrl = 'https://nsp.pay.naver.com/sdk/js/naverpay.min.js';
+    if (document.querySelector(`script[src="${naverPaySdkUrl}"]`)) {
+        return;
+    }
     const initializeNaverPay = () => {
-      if (window.Naver && window.Naver.Pay) {
-        console.log(`Naver Pay SDK create 시도 (clientId: ${CONFIG.naver.clientId}, chainId: ${CONFIG.naver.chainId}, mode: development)`);
+      if (window.Naver?.Pay) {
         try {
           window.naverPayInstance = window.Naver.Pay.create({
-            mode: 'development',
+            mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
             clientId: CONFIG.naver.clientId,
             chainId: CONFIG.naver.chainId,
           });
-          console.log('Naver Pay SDK 객체 생성 완료 (window.naverPayInstance):', window.naverPayInstance);
-        } catch (createError) {
-          console.error('Naver Pay SDK create 중 오류:', createError);
+        } catch (error) {
+          console.error('네이버페이 초기화 오류:', error);
         }
-      } else {
-        console.error('Naver Pay SDK 초기화 실패: window.Naver.Pay 객체를 찾을 수 없음.');
       }
     };
-
-    if (document.querySelector(`script[src="${naverPaySdkUrl}"]`)) {
-      initializeNaverPay();
-      return;
-    }
-
     const script = document.createElement('script');
     script.src = naverPaySdkUrl;
     script.async = true;
+    script.defer = true;
     script.onload = initializeNaverPay;
-    script.onerror = () => {
-      console.error('Naver Pay SDK 로드 실패.');
-    };
-
     document.body.appendChild(script);
-    console.log('Naver Pay SDK 로드 시작...');
+  }, [isAdminRoute]);
 
-    return () => {
-      const existingScript = document.querySelector(`script[src="${naverPaySdkUrl}"]`);
-      if (existingScript) {
-        document.body.removeChild(existingScript);
-        console.log('Naver Pay SDK 스크립트 제거됨.');
-      }
-    };
-  }, []);
-
+  if (isAdminRoute) {
+    return (
+      <AuthProvider>
+        <div className="flex flex-col min-h-screen bg-background text-foreground">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:p-3 focus:bg-background focus:text-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md"
+          >
+            본문으로 건너뛰기
+          </a>
+          <AdminHeader theme={theme} toggleTheme={toggleTheme} />
+          <main id="main-content" className="flex-grow container mx-auto px-4 py-8">
+            {children}
+          </main>
+          <AdminFooter />
+        </div>
+        <Toaster richColors position="top-right" />
+      </AuthProvider>
+    );
+  } 
+  
   return (
-    <CartProvider>
-      <header className="sticky top-0 z-50 w-full border-b border-[color:var(--border)] bg-white/50 backdrop-blur-xl dark:bg-gray-900/50">
-        <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <span className="text-2xl font-bold gradient-text">{CONFIG.site.name}</span>
-            </Link>
-            
-            <div className="flex items-center gap-4">
-              {/* 데스크톱 메뉴 */}
-              <div className="hidden md:flex gap-6">
-                <Link 
-                  href="/chat" 
-                  className="relative group px-4 py-2"
-                >
-                  <span className="relative z-10 text-text-light dark:text-text-dark group-hover:text-white transition-colors duration-200">
-                    AI 상담사
-                  </span>
-                  <div className="absolute inset-0 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left rounded-lg bg-gradient-blue opacity-80"></div>
-                </Link>
-                <Link 
-                  href="/menu" 
-                  className="relative group px-4 py-2"
-                >
-                  <span className="relative z-10 text-text-light dark:text-text-dark group-hover:text-white transition-colors duration-200">
-                    메뉴 보기
-                  </span>
-                  <div className="absolute inset-0 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left rounded-lg bg-gradient-blue opacity-80"></div>
-                </Link>
-              </div>
-              
-              {/* 장바구니 버튼 */}
-              <CartButton />
-              
-              {/* 모바일 메뉴 버튼 */}
-              <button 
-                className="md:hidden p-2 hover:bg-background-light/10 rounded-lg"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                aria-label="메뉴 열기"
-              >
-                <div className="w-6 h-0.5 bg-text-light dark:bg-text-dark mb-1.5"></div>
-                <div className="w-6 h-0.5 bg-text-light dark:bg-text-dark mb-1.5"></div>
-                <div className="w-6 h-0.5 bg-text-light dark:bg-text-dark"></div>
-              </button>
-            </div>
-          </div>
+    <UserProvider>
+      <CartProvider>
+        <div className="flex flex-col min-h-screen bg-background text-foreground">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:p-3 focus:bg-background focus:text-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md"
+          >
+            본문으로 건너뛰기
+          </a>
+          <UserHeader theme={theme} toggleTheme={toggleTheme} />
+          <main id="main-content" className="flex-grow container mx-auto px-4 py-8">
+            {children}
+          </main>
+          <UserFooter />
         </div>
-      </header>
-
-      <main className="flex-1">
-        {children}
-      </main>
-
-      <footer className="border-t border-[color:var(--border)] bg-white/50 dark:bg-gray-900/50">
-        <div className="container mx-auto px-4 py-8 md:py-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
-            <div className="glassmorphism p-4 md:p-6 rounded-xl">
-              <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 gradient-text">{CONFIG.site.name}</h3>
-              <p className="text-sm md:text-base text-text-light/70 dark:text-text-dark/70">
-                {CONFIG.site.description}
-              </p>
-            </div>
-            <div className="glassmorphism p-4 md:p-6 rounded-xl">
-              <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 gradient-text">메뉴</h3>
-              <ul className="space-y-2 md:space-y-3">
-                <li>
-                  <Link href="/chat" className="block text-sm md:text-base text-text-light/70 dark:text-text-dark/70 hover:text-primary transition-colors p-2">
-                    AI 상담사
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/menu" className="block text-sm md:text-base text-text-light/70 dark:text-text-dark/70 hover:text-primary transition-colors p-2">
-                    메뉴 보기
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-[color:var(--border)] text-center text-xs md:text-sm text-text-light/50 dark:text-text-dark/50">
-            © {new Date().getFullYear()} {CONFIG.site.name}. All rights reserved.
-          </div>
-        </div>
-      </footer>
-      <CartModal />
-      <Toaster position="top-right" />
-    </CartProvider>
+        <Toaster richColors position="top-right" />
+      </CartProvider>
+    </UserProvider>
   );
 } 

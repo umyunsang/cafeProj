@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:15026';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:15049';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('Forwarding request to backend');
     

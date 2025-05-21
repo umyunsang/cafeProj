@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ...database import get_db
-from ...models.payment import PaymentConfig
+from ...models.payment_settings import PaymentSettings
 from ...schemas.payment import PaymentConfigCreate, PaymentConfigResponse
-from ...dependencies import get_current_admin
+from ...dependencies import get_current_active_admin
+from ...models.admin import Admin
 from typing import List
 
 router = APIRouter()
@@ -11,10 +12,10 @@ router = APIRouter()
 @router.get("/payment-configs", response_model=List[PaymentConfigResponse])
 async def get_payment_configs(
     db: Session = Depends(get_db),
-    current_admin = Depends(get_current_admin)
+    current_admin: Admin = Depends(get_current_active_admin)
 ):
     """결제 설정 목록 조회"""
-    configs = db.query(PaymentConfig).all()
+    configs = db.query(PaymentSettings).all()
     return configs
 
 @router.post("/payment-configs/{provider}")
@@ -22,16 +23,16 @@ async def update_payment_config(
     provider: str,
     config: PaymentConfigCreate,
     db: Session = Depends(get_db),
-    current_admin = Depends(get_current_admin)
+    current_admin: Admin = Depends(get_current_active_admin)
 ):
     """결제 설정 업데이트"""
     if provider not in ['naver', 'kakao']:
         raise HTTPException(status_code=400, detail="지원하지 않는 결제 수단입니다.")
 
-    db_config = db.query(PaymentConfig).filter(PaymentConfig.provider == provider).first()
+    db_config = db.query(PaymentSettings).filter(PaymentSettings.provider == provider).first()
     
     if not db_config:
-        db_config = PaymentConfig(
+        db_config = PaymentSettings(
             provider=provider,
             client_id=config.client_id,
             client_secret=config.client_secret,

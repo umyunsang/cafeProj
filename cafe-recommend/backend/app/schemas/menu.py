@@ -8,6 +8,7 @@ class MenuBase(BaseModel):
     price: float = Field(..., gt=0, description="메뉴 가격")
     category: str = Field(..., description="메뉴 카테고리 (예: 커피, 디저트)")
     is_available: bool = Field(True, description="메뉴 가용 여부")
+    image_url: Optional[str] = Field(None, description="메뉴 이미지 URL")
 
 class SimpleMenuCreate(BaseModel):
     """필수 필드만 포함된 간소화된 메뉴 생성 스키마"""
@@ -46,6 +47,12 @@ class MenuInDB(MenuInDBBase):
 
 class MenuResponse(MenuBase):
     id: int
+
+    class Config:
+        from_attributes = True
+
+class MenuAvailabilityUpdate(BaseModel):
+    is_available: bool = Field(..., description="메뉴 가용 여부")
 
     class Config:
         from_attributes = True 

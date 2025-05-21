@@ -1,0 +1,8 @@
+<svg width="1000" height="800" viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="coffee-beans" patternUnits="userSpaceOnUse" width="100" height="100">
+      <path fill="#8B4513" d="M25,25 Q35,10 50,25 T75,25 Q90,10 75,40 T50,75 Q35,90 25,75 T25,25" />
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#coffee-beans)" opacity="0.3" />
+</svg> 

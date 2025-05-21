@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base_class import Base
+from app.database import Base
 
 class Cart(Base):
     __tablename__ = "carts"
@@ -28,4 +28,4 @@ class CartItem(Base):
 
     # Relationships
     cart = relationship("Cart", back_populates="items")
-    menu = relationship("Menu") 
+    menu = relationship("MenuItem") 

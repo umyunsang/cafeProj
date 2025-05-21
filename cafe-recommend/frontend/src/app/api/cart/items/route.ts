@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_BASE_URL = 'http://116.124.191.174:15026/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://116.124.191.174:15049/api';
 
 export async function POST(request: NextRequest) {
   try {
