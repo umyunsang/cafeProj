@@ -5,38 +5,33 @@ const BACKEND_URL = process.env.BACKEND_URL || 'https://cafe-backend-jv0t.onrend
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Forwarding menu request to backend:', BACKEND_URL);
+    console.log('Forwarding user identify request to backend:', BACKEND_URL);
     
-    // 세션 ID 헤더 추출
-    const sessionId = request.headers.get('X-Session-ID') || request.cookies.get('session_id')?.value;
-    
-    const response = await fetch(`${BACKEND_URL}/api/menus/`, {
+    const response = await fetch(`${BACKEND_URL}/api/user/identify`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        ...(sessionId && { 'X-Session-ID': sessionId }),
       },
-      // CORS 및 캐시 설정
       cache: 'no-cache'
     });
 
     if (!response.ok) {
-      console.error('Menu API Error Response:', response.status, response.statusText);
+      console.error('User Identify API Error Response:', response.status, response.statusText);
       const errorData = await response.text();
       console.error('Error details:', errorData);
       return NextResponse.json(
-        { error: '메뉴를 불러올 수 없습니다.' },
+        { error: '사용자 식별에 실패했습니다.' },
         { status: response.status }
       );
     }
 
     const data = await response.json();
-    console.log('Menu data received from backend:', data?.length || 0, 'items');
+    console.log('User identify data received from backend:', data);
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Menu API Error:', error);
+    console.error('User Identify API Error:', error);
     return NextResponse.json(
-      { error: '메뉴를 불러올 수 없습니다.' },
+      { error: '사용자 식별에 실패했습니다.' },
       { status: 500 }
     );
   }
