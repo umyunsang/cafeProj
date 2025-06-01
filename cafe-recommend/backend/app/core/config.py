@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str 
 
     # CORS 설정 (.env에서 로드, 문자열을 리스트로 변환)
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["https://cafe-app.onrender.com", "http://localhost:3000"]
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["https://cafeproj-q9ri.onrender.com", "http://localhost:3000"]
     # ALLOWED_ORIGINS: str = "http://localhost:15030" # BACKEND_CORS_ORIGINS로 통합 관리
     
     # 로깅 설정
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     LOG_FILE_NAME: str = "backend.log" # 로그 파일 이름만 .env 또는 여기서 정의
 
     # 프론트엔드 URL (.env에서 로드)
-    NEXT_PUBLIC_FRONTEND_URL: AnyHttpUrl = "https://cafe-app.onrender.com"  # 기본값 설정
+    NEXT_PUBLIC_FRONTEND_URL: AnyHttpUrl = "https://cafeproj-q9ri.onrender.com"  # 기본값 설정
 
     # 파일 업로드 설정 (경로는 BACKEND_ROOT_PATH 기준으로 동적 생성)
     UPLOAD_DIR_NAME: str = "uploads" 
