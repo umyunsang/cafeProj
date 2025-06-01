@@ -281,4 +281,46 @@ export function useUpdateOrder(): MutationResult<any> {
   }
 
   return { data, error, loading, mutate }
+}
+
+// 일반적인 API GET hook 별칭
+export function useApiGet<T>(key: string | null) {
+  return useApi<T>(key)
+}
+
+// 일반적인 API POST hook
+export function useApiPost<T>(): MutationResult<T> {
+  const [data, setData] = useState<T | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<ApiError | null>(null)
+
+  const mutate = async (endpoint: string, postData?: any) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: postData ? JSON.stringify(postData) : undefined,
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const result = await response.json() as T
+      setData(result)
+      return result
+    } catch (err) {
+      const apiError = err as ApiError
+      setError(apiError)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return { data, error, loading, mutate }
 } 

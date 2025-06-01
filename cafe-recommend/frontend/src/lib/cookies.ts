@@ -213,10 +213,10 @@ export class CookieManager {
   }
 }
 
-/**
- * 기본 쿠키 매니저 인스턴스
- */
-export const cookieManager = new CookieManager()
+// 기본 쿠키 매니저 인스턴스 생성
+const cookieManager = new CookieManager()
+
+export default cookieManager
 
 /**
  * 특별한 목적의 쿠키 헬퍼들

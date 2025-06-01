@@ -189,4 +189,35 @@ export function removeEmptyValues<T extends Record<string, any>>(obj: T): Partia
   }
   
   return result
+}
+
+/**
+ * 상대적 날짜 포맷팅 (formatRelativeDate 별칭)
+ */
+export function formatRelativeDate(date: Date | string): string {
+  return formatRelativeTime(date)
+}
+
+/**
+ * 한국어 날짜 포맷팅
+ */
+export function formatDateToKorean(date: Date | string, includeTime: boolean = false): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  
+  if (includeTime) {
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(dateObj)
+  }
+  
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(dateObj)
 } 

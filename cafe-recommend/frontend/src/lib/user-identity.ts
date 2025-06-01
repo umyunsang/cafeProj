@@ -416,13 +416,11 @@ export const UserFactory = {
  * 사용자 컨텍스트에서 사용할 액션 타입들
  */
 export const UserActionTypes = {
-  LOGIN_START: 'LOGIN_START',
-  LOGIN_SUCCESS: 'LOGIN_SUCCESS',
-  LOGIN_FAILURE: 'LOGIN_FAILURE',
-  LOGOUT: 'LOGOUT',
-  UPDATE_PROFILE: 'UPDATE_PROFILE',
+  SET_USER: 'SET_USER',
+  CLEAR_USER: 'CLEAR_USER',
+  UPDATE_PREFERENCES: 'UPDATE_PREFERENCES',
   SET_LOADING: 'SET_LOADING',
-  CLEAR_ERROR: 'CLEAR_ERROR'
+  SET_ERROR: 'SET_ERROR'
 } as const
 
 /**
@@ -441,4 +439,32 @@ export const initialAuthState: AuthState = {
   user: null,
   loading: false,
   error: null
+}
+
+// 편의 함수들을 export
+export function identifyUser(user: User): void {
+  UserSession.setUser(user)
+}
+
+export function getUserPreferences(): UserPreferences | null {
+  const user = UserSession.getUser()
+  return user?.preferences || null
+}
+
+export function updateUserPreferences(preferences: Partial<UserPreferences>): void {
+  const user = UserSession.getUser()
+  if (user) {
+    const updatedUser = {
+      ...user,
+      preferences: {
+        ...user.preferences,
+        ...preferences
+      }
+    }
+    UserSession.setUser(updatedUser)
+  }
+}
+
+export function clearUserSession(): void {
+  UserSession.clearUser()
 } 

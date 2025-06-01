@@ -1,4 +1,5 @@
 // 키보드 네비게이션 유틸리티 함수들
+import { useEffect, useRef } from 'react'
 
 /**
  * 키보드 이벤트 키 상수
@@ -499,4 +500,23 @@ export const globalShortcuts = new KeyboardShortcutManager()
 /**
  * 포커스 관리자 인스턴스
  */
-export const focusManager = new FocusManager() 
+export const focusManager = new FocusManager()
+
+/**
+ * React hook for focus trap
+ */
+export function useFocusTrap<T extends HTMLElement = HTMLElement>(
+  isActive: boolean = true
+): React.RefObject<T> {
+  const containerRef = useRef<T>(null)
+
+  useEffect(() => {
+    if (!isActive || !containerRef.current) return
+
+    const cleanup = createFocusTrap(containerRef.current)
+    
+    return cleanup
+  }, [isActive])
+
+  return containerRef
+} 
