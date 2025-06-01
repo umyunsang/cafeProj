@@ -23,6 +23,10 @@ services:
         value: cc0b57a5b7a4f9f1a6e9d8c7e5a0a3b8a2f0c7d8e1a9b6c5d4e3f2a1b0c9d8e7
       - key: DATABASE_URL
         value: sqlite:///./cafe_app.db
+      - key: NEXT_PUBLIC_FRONTEND_URL
+        value: https://cafe-app.onrender.com
+      - key: BACKEND_CORS_ORIGINS
+        value: '["https://cafe-app.onrender.com", "http://localhost:3000"]'
       - key: FIRST_SUPERUSER
         value: admin@test.com
       - key: FIRST_SUPERUSER_PASSWORD
