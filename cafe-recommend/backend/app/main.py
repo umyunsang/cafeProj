@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Response, Request, Cookie, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.openapi.utils import get_openapi
 import os
@@ -147,9 +148,23 @@ app = FastAPI(
 # 정적 파일 디렉토리 생성 (없는 경우)
 os.makedirs(os.path.join(app_settings.STATIC_DIR), exist_ok=True)
 os.makedirs(os.path.join(app_settings.STATIC_DIR, "menu_images"), exist_ok=True)
+os.makedirs(os.path.join(app_settings.STATIC_DIR, "frontend"), exist_ok=True)
 
 # 정적 파일 제공
 app.mount("/static", StaticFiles(directory=app_settings.STATIC_DIR), name="static")
+
+# 프론트엔드 정적 파일 마운팅
+frontend_dir = os.path.join(app_settings.STATIC_DIR, "frontend")
+if os.path.exists(frontend_dir):
+    # Next.js 정적 리소스 마운팅
+    nextjs_static_dir = os.path.join(frontend_dir, "_next")
+    if os.path.exists(nextjs_static_dir):
+        app.mount("/_next", StaticFiles(directory=nextjs_static_dir), name="nextjs_static")
+    
+    # 프론트엔드 이미지 마운팅
+    frontend_images_dir = os.path.join(frontend_dir, "images")
+    if os.path.exists(frontend_images_dir):
+        app.mount("/images", StaticFiles(directory=frontend_images_dir), name="frontend_images")
 
 # GZIP 압축 미들웨어 추가
 app.add_middleware(GZipMiddleware, minimum_size=1000)  # 1KB 이상 응답 압축
@@ -194,14 +209,6 @@ app.include_router(alerts_router, prefix="/api/admin/alerts", tags=["admin", "ad
 # 일단 custom_admin_auth_router의 prefix도 /api/admin/auth로 변경하여 충돌을 명시적으로 만들거나, 
 # app.api.admin.auth.router 하나만 사용하도록 정리 필요. 여기서는 custom_admin_auth_router도 변경.
 # app.include_router(custom_admin_auth_router, prefix="/api/admin/auth", tags=["admin", "admin:auth"])
-
-# 메인 루트 경로
-@app.get("/", tags=["status"])
-async def root():
-    """
-    API 서버 상태 확인을 위한 루트 엔드포인트
-    """
-    return {"message": "카페 추천 시스템 API", "status": "active"}
 
 # CSRF 토큰 발급 및 갱신 엔드포인트
 @app.get("/api/csrf-token", tags=["security"])
@@ -342,4 +349,37 @@ async def get_openapi_schema():
 def from_now():
     """현재 시간을 ISO 8601 형식으로 반환합니다."""
     from datetime import datetime
-    return datetime.now().isoformat() 
+    return datetime.now().isoformat()
+
+# SPA 지원을 위한 catch-all 라우트 (모든 API 라우트 이후에 배치)
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_frontend(full_path: str):
+    """
+    프론트엔드 정적 파일 서빙 및 SPA 지원
+    API 경로가 아닌 모든 경로를 프론트엔드로 라우팅
+    """
+    frontend_dir = os.path.join(app_settings.STATIC_DIR, "frontend")
+    
+    if not os.path.exists(frontend_dir):
+        raise HTTPException(status_code=404, detail="Frontend not found")
+    
+    # 루트 경로 또는 빈 경로의 경우 index.html 반환
+    if not full_path or full_path == "":
+        index_path = os.path.join(frontend_dir, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+    
+    # 요청된 파일 경로
+    file_path = os.path.join(frontend_dir, full_path)
+    
+    # 파일이 존재하는 경우 직접 반환
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    # SPA 라우팅: 파일이 없는 경우 index.html 반환 (React Router 지원)
+    index_path = os.path.join(frontend_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
+    # 모든 경우에 실패하면 404
+    raise HTTPException(status_code=404, detail="Page not found") 

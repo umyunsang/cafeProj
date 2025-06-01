@@ -1,12 +1,26 @@
 services:
-  # 백엔드 API 서비스
+  # 풀스택 서비스 (백엔드 + 프론트엔드)
   - type: web
-    name: cafe-api
+    name: cafe-fullstack
     env: python
     plan: free
     region: oregon
     buildCommand: |
-      cd cafe-recommend/backend
+      # Node.js 설치
+      curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+      sudo apt-get install -y nodejs
+      
+      # 프론트엔드 빌드
+      cd cafe-recommend/frontend
+      npm ci
+      npm run build
+      
+      # 빌드된 정적 파일을 백엔드 static 폴더로 복사
+      mkdir -p ../backend/static/frontend
+      cp -r out/* ../backend/static/frontend/
+      
+      # 백엔드 의존성 설치
+      cd ../backend
       pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
     startCommand: |
@@ -25,9 +39,9 @@ services:
       - key: DATABASE_URL
         value: sqlite:///./cafe_app.db
       - key: NEXT_PUBLIC_FRONTEND_URL
-        value: https://cafeproj-frontend.onrender.com
+        value: https://cafe-fullstack-q9ri.onrender.com
       - key: BACKEND_CORS_ORIGINS
-        value: '["https://cafeproj-frontend.onrender.com", "http://localhost:3000"]'
+        value: '["https://cafe-fullstack-q9ri.onrender.com", "http://localhost:3000"]'
       - key: FIRST_SUPERUSER
         value: admin@test.com
       - key: FIRST_SUPERUSER_PASSWORD
@@ -51,21 +65,4 @@ services:
       - key: NAVER_PAY_CLIENT_SECRET
         value: ftZjkkRNMR
       - key: NAVER_PAY_CHAIN_ID
-        value: c1l0UTFCMlNwNjY
-
-  # 프론트엔드 정적 사이트
-  - type: web
-    name: cafe-frontend
-    env: static
-    plan: free
-    region: oregon
-    buildCommand: |
-      cd cafe-recommend/frontend
-      npm ci
-      npm run build
-    staticPublishPath: cafe-recommend/frontend/out
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        value: https://cafe-api-q9ri.onrender.com
-      - key: NEXT_PUBLIC_FRONTEND_URL
-        value: https://cafeproj-frontend.onrender.com 
+        value: c1l0UTFCMlNwNjY 
