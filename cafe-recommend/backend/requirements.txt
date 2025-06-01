@@ -1,46 +1,43 @@
-# FastAPI 및 웹 프레임워크
+# FastAPI and web framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 starlette==0.27.0
 
-# 인증 및 보안
+# Authentication and security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 
-# 환경 변수 및 설정
+# Environment variables and settings
 python-dotenv==1.0.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# 데이터베이스
+# Database
 sqlalchemy==2.0.23
 alembic==1.12.1
 
-# 유효성 검사
+# Validation
 email-validator==2.1.2
 
-# HTTP 클라이언트 및 요청 처리
+# HTTP client and request handling
 httpx==0.25.2
 requests==2.31.0
 
-# 파일 처리
+# File processing
 aiofiles==23.2.1
 jinja2==3.1.2
 
-# AI 및 OpenAI
+# AI and OpenAI
 openai==1.3.7
 
-# 실시간 통신
+# Real-time communication
 websockets==12.0
 sse-starlette==1.8.2
 
-# 시간 및 타임존
+# Time and timezone
 pytz==2023.3
 
-# 표준 라이브러리 (일반적으로 포함되지만 일부 환경에서 필요할 수 있음)
-# uuid, json, time, datetime, secrets, hashlib, base64, logging은 Python 내장 모듈
-
-# 개발 및 테스트 (선택사항)
+# Development and testing (optional)
 pytest==7.4.3
 pytest-asyncio==0.21.1 
