@@ -85,7 +85,7 @@ export default function MenuPage() {
         
         if (anonymousId) {
           // 장바구니 초기화 API 호출
-          const cartData = await apiClient.post('/api/cart', {
+          const cartData = await apiClient.post('/api/cart', {}, {
             headers: {
               'X-Session-ID': anonymousId
             }
@@ -95,7 +95,7 @@ export default function MenuPage() {
           
           // 장바구니 데이터를 쿠키에 저장
           if (cartData) {
-            cookieManager.set('cafe_cart', cartData);
+            cookieManager.setJson('cafe_cart', cartData);
             console.log('장바구니 쿠키 저장 완료:', cartData);
           }
         }
@@ -141,57 +141,44 @@ export default function MenuPage() {
   };
 
   const processedMenus = useMemo(() => {
-    if (!menus) return [];
+    // 데이터가 없거나 배열이 아닌 경우 빈 배열 반환
+    if (!menus || !Array.isArray(menus)) {
+      console.warn('Menus data is not an array:', menus);
+      return [];
+    }
 
     let filtered = selectedCategory === 'all' 
       ? [...menus] // 원본 배열 수정을 피하기 위해 복사
-      : menus.filter(menu => menu.category === selectedCategory);
+      : menus.filter(menu => menu && menu.category === selectedCategory);
+
+    // null이나 undefined 요소 제거
+    filtered = filtered.filter(menu => menu != null);
 
     switch (sortOption) {
       case 'price_asc':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a, b) => (a?.price || 0) - (b?.price || 0));
         break;
       case 'price_desc':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a, b) => (b?.price || 0) - (a?.price || 0));
         break;
       case 'name_asc':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        filtered.sort((a, b) => (a?.name || '').localeCompare(b?.name || ''));
         break;
       case 'name_desc':
-        filtered.sort((a, b) => b.name.localeCompare(a.name));
+        filtered.sort((a, b) => (b?.name || '').localeCompare(a?.name || ''));
         break;
       default:
         // 기본 정렬 시 ID 기준 오름차순 (일관된 순서 보장)
-        filtered.sort((a, b) => a.id - b.id);
+        filtered.sort((a, b) => (a?.id || 0) - (b?.id || 0));
         break;
     }
 
-    // 개발용 임시 이미지 주입 로직
-    /*
-    const devImageMap: { [key: string]: string } = {
-      // 정확한 메뉴 이름으로 매핑해야 합니다. API 응답의 실제 메뉴 이름을 확인하세요.
-      // 예시 이름입니다.
-      '아메리카노': '/static/menu_images/dev-americano.svg',
-      '카페 라떼': '/static/menu_images/dev-cafelatte.svg',
-      // 필요시 다른 메뉴도 추가
-    };
-
-    const menusWithDevImages = filtered.map(menu => {
-      // API에서 받아온 메뉴 이름과 정확히 일치해야 합니다.
-      // 예를 들어 API 응답이 "Americano" 이면, devImageMap의 키도 "Americano"여야 합니다.
-      if (devImageMap[menu.name]) {
-        return { ...menu, imageUrl: devImageMap[menu.name] };
-      }
-      return menu;
-    });
-    */
-
-    // return menusWithDevImages; // 주석 처리된 로직 대신 filtered를 직접 사용
+    // 안전한 데이터 매핑
     return filtered.map(m => ({
       ...m,
-      description: m.description === null ? undefined : m.description,
-      imageUrl: m.image_url // menu.image_url을 menu.imageUrl로 매핑
-    }));
+      description: m?.description === null ? undefined : m?.description,
+      imageUrl: m?.image_url // menu.image_url을 menu.imageUrl로 매핑
+    })).filter(m => m.id && m.name); // 필수 필드가 있는 메뉴만 반환
   }, [menus, selectedCategory, sortOption]);
 
   if (error) {
