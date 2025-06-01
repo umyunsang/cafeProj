@@ -13,9 +13,10 @@ PROJECT_ROOT_PATH = BACKEND_ROOT_PATH.parent.parent # cafeProj/ (프로젝트 �
 ENV_FILE_PATH = PROJECT_ROOT_PATH / ".env"
 
 class Settings(BaseSettings):
-    # 서버 설정
+    # 서버 설정 (Railway의 PORT 환경 변수를 우선 사용)
     HOST: str = "0.0.0.0"
-    BACKEND_PORT: int = 15049 # PORT에서 이름 변경 및 타입 int로 변경
+    PORT: int = int(os.getenv("PORT", "15049"))  # Railway PORT 우선, 기본값 15049
+    BACKEND_PORT: int = int(os.getenv("PORT", "15049"))  # 기존 호환성 유지
     ENVIRONMENT: str = "development"
     
     # API 기본 설정
@@ -103,9 +104,12 @@ class Settings(BaseSettings):
         
     # 서버 기본 URL (이미지 URL 생성에 사용)
     def get_server_url(self) -> str:
-        # ENVIRONMENT에 따라 http/https 및 포트 등을 다르게 설정할 수 있음
-        # 지금은 BACKEND_PORT를 사용
-        return f"http://{self.HOST}:{self.BACKEND_PORT}"
+        # Railway에서는 HTTPS를 사용하므로 ENVIRONMENT에 따라 구분
+        if self.ENVIRONMENT == "production":
+            # Railway는 HTTPS 자동 제공
+            return f"https://{os.getenv('RAILWAY_STATIC_URL', 'localhost')}"
+        # 개발 환경에서는 HTTP 사용
+        return f"http://{self.HOST}:{self.PORT}"
     
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
@@ -167,6 +171,7 @@ settings = Settings()
 # 애플리케이션 시작 시 설정값 로드 확인용 print문 (운영 환경에서는 제거 고려)
 print(f"[CONFIG_LOAD] Initialized Settings from {ENV_FILE_PATH}:") 
 print(f"- ENVIRONMENT: {settings.ENVIRONMENT}")
+print(f"- PORT: {settings.PORT}")
 print(f"- DATABASE_URL: {settings.DATABASE_URL}")
 print(f"- STATIC_DIR: {settings.STATIC_DIR}")
 print(f"- UPLOAD_DIR: {settings.UPLOAD_DIR}")

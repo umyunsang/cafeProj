@@ -1,0 +1,16 @@
+[phases.setup]
+nixPkgs = ["python39", "nodejs-18_x", "yarn"]
+
+[phases.install]
+cmds = [
+    "cd cafe-recommend/backend && pip install -r requirements.txt",
+    "cd cafe-recommend/frontend && yarn install"
+]
+
+[phases.build]
+cmds = [
+    "cd cafe-recommend/frontend && yarn build"
+]
+
+[start]
+cmd = "cd cafe-recommend/backend && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT" 
