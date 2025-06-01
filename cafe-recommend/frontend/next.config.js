@@ -175,11 +175,6 @@ const nextConfig = {
   // API 경로 재작성 설정
   async rewrites() {
     return [
-      // 모든 API 요청을 백엔드 서버로 리다이렉션
-      {
-        source: '/api/:path*',
-        destination: `${BACKEND_URL}/api/:path*`,
-      },
       // 정적 파일 요청을 백엔드 서버로 리다이렉션
       {
         source: '/static/:path*',

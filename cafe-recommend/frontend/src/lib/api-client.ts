@@ -2,10 +2,10 @@
 const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
     // 클라이언트 사이드에서는 빌드 시점의 환경변수 사용
-    return 'http://localhost:8000';
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   }
   // 서버 사이드에서는 런타임 환경변수 사용
-  return 'http://localhost:8000';
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 };
 
 export const API_BASE_URL = getApiBaseUrl();

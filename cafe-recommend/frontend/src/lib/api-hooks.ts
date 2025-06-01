@@ -31,31 +31,31 @@ export function useApi<T>(key: string | null) {
   }
 }
 
-// 메뉴 관련 hooks
+// 메뉴 관련 hooks - 프론트엔드 API 라우트 사용
 export function useMenu() {
-  return useApi('/api/menu')
+  return useApi('/api/menus')
 }
 
 export function useMenuItem(id: string | null) {
   return useApi(id ? `/api/menu/${id}` : null)
 }
 
-// 재료 관련 hooks
+// 재료 관련 hooks - 프론트엔드 API 라우트 사용
 export function useIngredients() {
-  return useApi('/api/ingredients')
+  return useApi('/api/admin/ingredients')
 }
 
 export function useIngredient(id: string | null) {
-  return useApi(id ? `/api/ingredients/${id}` : null)
+  return useApi(id ? `/api/admin/ingredients/${id}` : null)
 }
 
-// 주문 관련 hooks
+// 주문 관련 hooks - 프론트엔드 API 라우트 사용
 export function useOrders() {
-  return useApi('/api/orders')
+  return useApi('/api/admin/orders')
 }
 
 export function useOrder(id: string | null) {
-  return useApi(id ? `/api/orders/${id}` : null)
+  return useApi(id ? `/api/admin/orders/${id}` : null)
 }
 
 // AI 추천 관련 hooks
