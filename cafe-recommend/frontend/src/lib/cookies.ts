@@ -211,6 +211,19 @@ export class CookieManager {
       this.delete(name)
     })
   }
+
+  // 사용자 ID 관련 메소드
+  getUserId(): string | null {
+    return this.get('cafe_user_id')
+  }
+
+  setUserId(userId: string): void {
+    this.set('cafe_user_id', userId, { maxAge: 365 * 24 * 60 * 60 }) // 1년
+  }
+
+  clearUserId(): void {
+    this.delete('cafe_user_id')
+  }
 }
 
 // 기본 쿠키 매니저 인스턴스 생성

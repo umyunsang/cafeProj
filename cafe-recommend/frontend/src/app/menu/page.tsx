@@ -57,10 +57,10 @@ export default function MenuPage() {
   const { sessionId, fetchCart } = useCart();
   
   // API 캐싱을 적용한 데이터 가져오기
-  const { data: menus, loading: isLoading, error, refetch } = useApiGet<MenuApiResponse[]>('/api/menus', {
-    useCache: true,
-    cacheTTL: 5 * 60 * 1000, // 5분 캐시
-  });
+  const { data: menus, loading: isLoading, error, mutate } = useApiGet<MenuApiResponse[]>('/api/menus');
+  
+  // refetch 함수를 mutate로 대체
+  const refetch = mutate;
 
   // 장바구니 세션 초기화
   useEffect(() => {
