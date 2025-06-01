@@ -35,13 +35,14 @@ const nextConfig = {
     // 빌드 시 TypeScript 타입 체크를 건너뜀
     ignoreBuildErrors: true,
   },
-  output: 'standalone',
+  output: 'export',
   // 슬래시 자동 추가 비활성화
   trailingSlash: false,
   reactStrictMode: true,
   
-  // 이미지 최적화 설정
+  // 정적 export를 위해 이미지 최적화 비활성화
   images: {
+    unoptimized: true,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24, // 24시간

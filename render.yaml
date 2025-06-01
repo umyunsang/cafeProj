@@ -1,6 +1,7 @@
 services:
+  # 백엔드 API 서비스
   - type: web
-    name: cafe-app
+    name: cafe-api
     env: python
     plan: free
     region: oregon
@@ -24,9 +25,9 @@ services:
       - key: DATABASE_URL
         value: sqlite:///./cafe_app.db
       - key: NEXT_PUBLIC_FRONTEND_URL
-        value: https://cafeproj-q9ri.onrender.com
+        value: https://cafeproj-frontend.onrender.com
       - key: BACKEND_CORS_ORIGINS
-        value: '["https://cafeproj-q9ri.onrender.com", "http://localhost:3000"]'
+        value: '["https://cafeproj-frontend.onrender.com", "http://localhost:3000"]'
       - key: FIRST_SUPERUSER
         value: admin@test.com
       - key: FIRST_SUPERUSER_PASSWORD
@@ -50,4 +51,21 @@ services:
       - key: NAVER_PAY_CLIENT_SECRET
         value: ftZjkkRNMR
       - key: NAVER_PAY_CHAIN_ID
-        value: c1l0UTFCMlNwNjY 
+        value: c1l0UTFCMlNwNjY
+
+  # 프론트엔드 정적 사이트
+  - type: web
+    name: cafe-frontend
+    env: static
+    plan: free
+    region: oregon
+    buildCommand: |
+      cd cafe-recommend/frontend
+      npm ci
+      npm run build
+    staticPublishPath: cafe-recommend/frontend/out
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://cafe-api-q9ri.onrender.com
+      - key: NEXT_PUBLIC_FRONTEND_URL
+        value: https://cafeproj-frontend.onrender.com 
