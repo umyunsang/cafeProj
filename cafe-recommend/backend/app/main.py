@@ -214,8 +214,15 @@ app.include_router(alerts_router, prefix="/api/admin/alerts", tags=["admin", "ad
 @app.get("/", tags=["status"])
 async def root():
     """
-    API 서버 상태 확인을 위한 루트 엔드포인트
+    프론트엔드 index.html 파일을 서빙합니다.
+    프론트엔드가 없는 경우 API 상태를 반환합니다.
     """
+    frontend_dir = os.path.join(app_settings.STATIC_DIR, "frontend")
+    index_path = os.path.join(frontend_dir, "index.html")
+    
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
     return {"message": "카페 추천 시스템 API", "status": "active", "frontend": "준비 중"}
 
 # CSRF 토큰 발급 및 갱신 엔드포인트
@@ -359,35 +366,33 @@ def from_now():
     from datetime import datetime
     return datetime.now().isoformat()
 
-# SPA 지원을 위한 catch-all 라우트 (임시 비활성화)
-# @app.get("/{full_path:path}", include_in_schema=False)
-# async def serve_frontend(full_path: str):
-#     """
-#     프론트엔드 정적 파일 서빙 및 SPA 지원
-#     API 경로가 아닌 모든 경로를 프론트엔드로 라우팅
-#     """
-#     frontend_dir = os.path.join(app_settings.STATIC_DIR, "frontend")
-#     
-#     if not os.path.exists(frontend_dir):
-#         raise HTTPException(status_code=404, detail="Frontend not found")
-#     
-#     # 루트 경로 또는 빈 경로의 경우 index.html 반환
-#     if not full_path or full_path == "":
-#         index_path = os.path.join(frontend_dir, "index.html")
-#         if os.path.exists(index_path):
-#             return FileResponse(index_path)
-#     
-#     # 요청된 파일 경로
-#     file_path = os.path.join(frontend_dir, full_path)
-#     
-#     # 파일이 존재하는 경우 직접 반환
-#     if os.path.exists(file_path) and os.path.isfile(file_path):
-#         return FileResponse(file_path)
-#     
-#     # SPA 라우팅: 파일이 없는 경우 index.html 반환 (React Router 지원)
-#     index_path = os.path.join(frontend_dir, "index.html")
-#     if os.path.exists(index_path):
-#         return FileResponse(index_path)
-#     
-#     # 모든 경우에 실패하면 404
-#     raise HTTPException(status_code=404, detail="Page not found") 
+# SPA 지원을 위한 catch-all 라우트
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_frontend(full_path: str):
+    """
+    프론트엔드 정적 파일 서빙 및 SPA 지원
+    API 경로가 아닌 모든 경로를 프론트엔드로 라우팅
+    """
+    # API 경로는 제외
+    if full_path.startswith("api/") or full_path.startswith("static/") or full_path.startswith("health") or full_path.startswith("_next/"):
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+    
+    frontend_dir = os.path.join(app_settings.STATIC_DIR, "frontend")
+    
+    if not os.path.exists(frontend_dir):
+        raise HTTPException(status_code=404, detail="Frontend not found")
+    
+    # 요청된 파일 경로
+    file_path = os.path.join(frontend_dir, full_path)
+    
+    # 파일이 존재하는 경우 직접 반환
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    # SPA 라우팅: 파일이 없는 경우 index.html 반환 (Next.js Router 지원)
+    index_path = os.path.join(frontend_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
+    # 모든 경우에 실패하면 404
+    raise HTTPException(status_code=404, detail="Page not found") 

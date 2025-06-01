@@ -6,23 +6,53 @@ services:
     plan: free
     region: oregon
     buildCommand: |
-      # Node.js 설치
-      curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-      sudo apt-get install -y nodejs
+      echo "=== 빌드 시작 ==="
+      
+      # Node.js 20 설치 (더 안정적인 버전)
+      echo "=== Node.js 설치 중 ==="
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+      apt-get install -y nodejs
+      
+      # Node.js 버전 확인
+      node --version
+      npm --version
       
       # 프론트엔드 빌드
+      echo "=== 프론트엔드 빌드 중 ==="
       cd cafe-recommend/frontend
-      npm ci
+      
+      # package.json 확인
+      ls -la
+      cat package.json
+      
+      # npm 캐시 클리어 및 의존성 설치
+      npm cache clean --force
+      npm ci --production=false
+      
+      # 환경변수 설정
+      export NEXT_PUBLIC_API_URL=https://cafeproj-q9ri.onrender.com
+      
+      # Next.js 빌드
       npm run build
       
+      # 빌드 결과 확인
+      ls -la out/
+      
       # 빌드된 정적 파일을 백엔드 static 폴더로 복사
+      echo "=== 정적 파일 복사 중 ==="
       mkdir -p ../backend/static/frontend
       cp -r out/* ../backend/static/frontend/
       
+      # 복사 결과 확인
+      ls -la ../backend/static/frontend/
+      
       # 백엔드 의존성 설치
+      echo "=== 백엔드 의존성 설치 중 ==="
       cd ../backend
       pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
+      
+      echo "=== 빌드 완료 ==="
     startCommand: |
       cd cafe-recommend/backend
       python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 30
@@ -38,6 +68,8 @@ services:
         value: cc0b57a5b7a4f9f1a6e9d8c7e5a0a3b8a2f0c7d8e1a9b6c5d4e3f2a1b0c9d8e7
       - key: DATABASE_URL
         value: sqlite:///./cafe_app.db
+      - key: NEXT_PUBLIC_API_URL
+        value: https://cafeproj-q9ri.onrender.com
       - key: NEXT_PUBLIC_FRONTEND_URL
         value: https://cafeproj-q9ri.onrender.com
       - key: BACKEND_CORS_ORIGINS
