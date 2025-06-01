@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-static';
-export const revalidate = 0;
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:15049';
 
 export async function POST(request: NextRequest) {
@@ -16,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     if (!tid || !pg_token || !order_id) {
       return NextResponse.json(
-        { error: '필수 파라미터 (tid, pg_token, order_id)가 누락되었습니다.' },
+        { error: '필수 파라미터 (tid, pg_token, order_id)가 비었니??' },
         { status: 400 }
       );
     }
@@ -40,10 +37,10 @@ export async function POST(request: NextRequest) {
       try {
         errorData = await response.json();
       } catch (e) {
-        errorData = { detail: response.statusText || '알 수 없는 백엔드 오류' };
+        errorData = { detail: response.statusText || '알 수 없는 백엔드 에러' };
       }
       return NextResponse.json(
-        { error: errorData.detail || '결제 완료 처리에 실패했습니다.' },
+        { error: errorData.detail || '결제 처리 실패했습니다.' },
         { status: response.status }
       );
     }
@@ -51,9 +48,9 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('결제 완료 처리 중 오류 발생 (프론트엔드 API 라우트):', error);
+    console.error('결제 처리 에러 발생 (예상치 못한 API 요청:', error);
     return NextResponse.json(
-      { error: '결제 완료 처리 중 내부 오류가 발생했습니다.' },
+      { error: '결제 처리 에러가 발생했습니다.' },
       { status: 500 }
     );
   }

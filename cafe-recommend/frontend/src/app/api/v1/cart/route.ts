@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-static';
-export const revalidate = 0;
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:15049';
 
 export async function GET(request: NextRequest) {
@@ -12,7 +9,7 @@ export async function GET(request: NextRequest) {
     if (!sessionId) {
       console.error('Session ID not found');
       return NextResponse.json(
-        { error: '세션이 유효하지 않습니다.' },
+        { error: '세션이 유효하지 않습니다. 다시 로그인해주세요.' },
         { status: 401 }
       );
     }
@@ -34,7 +31,7 @@ export async function GET(request: NextRequest) {
       const errorData = await response.text();
       console.error('Error details:', errorData);
       return NextResponse.json(
-        { error: '장바구니를 불러올 수 없습니다.' },
+        { error: '장바구니를 불러오는 중 오류가 발생했습니다.' },
         { status: response.status }
       );
     }
@@ -44,7 +41,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Cart API Error:', error);
     return NextResponse.json(
-      { error: '장바구니를 불러올 수 없습니다.' },
+      { error: '장바구니를 불러오는 중 오류가 발생했습니다.' },
       { status: 500 }
     );
   }
@@ -57,7 +54,7 @@ export async function DELETE(request: NextRequest) {
     if (!sessionId) {
       console.error('Session ID not found');
       return NextResponse.json(
-        { error: '세션이 유효하지 않습니다.' },
+        { error: '세션이 유효하지 않습니다. 다시 로그인해주세요.' },
         { status: 401 }
       );
     }
@@ -79,7 +76,7 @@ export async function DELETE(request: NextRequest) {
       const errorData = await response.text();
       console.error('Error details:', errorData);
       return NextResponse.json(
-        { error: '장바구니를 비울 수 없습니다.' },
+        { error: '장바구니를 비우는 중 오류가 발생했습니다.' },
         { status: response.status }
       );
     }
@@ -88,7 +85,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Cart API Error:', error);
     return NextResponse.json(
-      { error: '장바구니를 비울 수 없습니다.' },
+      { error: '장바구니를 비우는 중 오류가 발생했습니다.' },
       { status: 500 }
     );
   }

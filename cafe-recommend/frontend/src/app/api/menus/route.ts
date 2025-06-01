@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-static';
-export const revalidate = 0;
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:15049';
 
 export async function GET() {
@@ -21,7 +18,7 @@ export async function GET() {
       const errorData = await response.text();
       console.error('Error details:', errorData);
       return NextResponse.json(
-        { error: '메뉴를 불러올 수 없습니다.' },
+        { error: '메뉴�?불러?????�습?�다.' },
         { status: response.status }
       );
     }
@@ -31,7 +28,7 @@ export async function GET() {
   } catch (error) {
     console.error('Menu API Error:', error);
     return NextResponse.json(
-      { error: '메뉴를 불러올 수 없습니다.' },
+      { error: '메뉴�?불러?????�습?�다.' },
       { status: 500 }
     );
   }

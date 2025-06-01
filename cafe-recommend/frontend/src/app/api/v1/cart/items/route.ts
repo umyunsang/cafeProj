@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-static';
-export const revalidate = 0;
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:15049';
 
 export async function POST(request: NextRequest) {
@@ -36,7 +33,7 @@ export async function POST(request: NextRequest) {
       const errorData = await response.text();
       console.error('Error details:', errorData);
       return NextResponse.json(
-        { error: '장바구니에 항목을 추가할 수 없습니다.' },
+        { error: '장바구니에 아이템을 추가하는 중 오류가 발생했습니다.' },
         { status: response.status }
       );
     }
@@ -46,7 +43,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Cart Items API Error:', error);
     return NextResponse.json(
-      { error: '장바구니에 항목을 추가할 수 없습니다.' },
+      { error: '장바구니에 아이템을 추가하는 중 오류가 발생했습니다.' },
       { status: 500 }
     );
   }
