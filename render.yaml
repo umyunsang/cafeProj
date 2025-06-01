@@ -1,7 +1,7 @@
 services:
-  # 풀스택 서비스 (백엔드 + 프론트엔드)
+  # 풀스택 서비스 (백엔드 + 프론트엔드) - 기존 URL 유지
   - type: web
-    name: cafe-fullstack
+    name: cafe-app
     env: python
     plan: free
     region: oregon
@@ -39,9 +39,9 @@ services:
       - key: DATABASE_URL
         value: sqlite:///./cafe_app.db
       - key: NEXT_PUBLIC_FRONTEND_URL
-        value: https://cafe-fullstack-q9ri.onrender.com
+        value: https://cafeproj-q9ri.onrender.com
       - key: BACKEND_CORS_ORIGINS
-        value: '["https://cafe-fullstack-q9ri.onrender.com", "http://localhost:3000"]'
+        value: '["https://cafeproj-q9ri.onrender.com", "http://localhost:3000"]'
       - key: FIRST_SUPERUSER
         value: admin@test.com
       - key: FIRST_SUPERUSER_PASSWORD
