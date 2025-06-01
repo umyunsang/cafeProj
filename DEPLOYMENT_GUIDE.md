@@ -1,4 +1,4 @@
-# Railway 배포 가이드
+# Railway 배포 가이드 (Dockerfile 방식)
 
 ## 1. Railway 준비사항
 
@@ -50,19 +50,20 @@ NAVER_PAY_CHAIN_ID=c1l0UTFCMlNwNjY
 
 ## 2. 배포 순서
 
-### 2.1 GitHub에 푸시
+### 2.1 GitHub에 푸시 (이미 완료됨)
 ```bash
 git add .
-git commit -m "Add Railway deployment configuration"
+git commit -m "Add Dockerfile-based Railway deployment"
 git push origin deployment-setup
 ```
 
 ### 2.2 Railway에서 배포
 1. Railway 대시보드에서 프로젝트 선택
-2. GitHub 저장소 연결
-3. `deployment-setup` 브랜치 선택
-4. 위의 환경 변수들을 Variables 섹션에 입력
-5. Deploy 실행
+2. **Settings → Connect Repo** → GitHub 저장소 연결
+3. **Branch 설정**: `deployment-setup` 브랜치 선택
+4. **Build 방식**: Docker (자동 감지됨)
+5. **Environment Variables** → 위의 환경 변수들 입력
+6. **Deploy** 버튼 클릭
 
 ### 2.3 배포 후 URL 업데이트
 배포 완료 후 Railway에서 생성된 URL을 확인하고 다음 환경 변수들을 업데이트:
@@ -79,28 +80,30 @@ NEXT_PUBLIC_FRONTEND_URL=https://실제생성된-URL.up.railway.app
 
 ## 3. 문제 해결
 
-### 3.1 자주 발생하는 문제들
-1. **빌드 실패**: 환경 변수 누락 확인
+### 3.1 Nixpacks 빌드 실패 해결
+이제 **Dockerfile**을 사용하므로 Nixpacks 문제가 해결됩니다:
+- Docker 기반 빌드는 더 안정적이고 예측 가능합니다
+- 모든 의존성이 명시적으로 관리됩니다
+
+### 3.2 자주 발생하는 문제들
+1. **빌드 실패**: Dockerfile 문법 확인
 2. **CORS 오류**: BACKEND_CORS_ORIGINS에 정확한 URL 설정
 3. **API 연결 실패**: Railway 생성 URL 확인
+4. **포트 문제**: Railway가 PORT 환경 변수를 자동 설정
 
-### 3.2 Railway 로그 확인
+### 3.3 Railway 로그 확인
 Railway 대시보드 → 프로젝트 → Deployments → 로그 확인
 
-## 4. 로컬 테스트
+## 4. 로컬 Docker 테스트
 
-배포 전 로컬에서 테스트:
+배포 전 로컬에서 Docker 테스트:
 ```bash
-# 1. 환경 변수 설정 (.env 파일 생성)
-# 위의 환경 변수들을 .env 파일에 복사
+# 1. Docker 이미지 빌드
+docker build -t cafe-app .
 
-# 2. 백엔드 실행
-cd cafe-recommend/backend
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+# 2. 컨테이너 실행 (환경 변수 파일 필요)
+docker run -p 8000:8000 --env-file .env cafe-app
 
-# 3. 프론트엔드 빌드 (Node.js 설치 필요)
-cd ../frontend
-npm install
-npm run build
+# 3. 브라우저에서 확인
+# http://localhost:8000/health
 ``` 
