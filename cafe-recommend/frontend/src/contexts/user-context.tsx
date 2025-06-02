@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getUserPreferences, updateUserPreferences, clearUserSession, UserPreferences } from '@/lib/user-identity';
+import { getUserPreferences, updateUserPreferences, clearUserSession, UserPreferences, UserSession, UserRole } from '@/lib/user-identity';
 
 // 사용자 컨텍스트 타입
 interface UserContextType {
@@ -21,7 +21,6 @@ const defaultContextValue: UserContextType = {
   preferences: {
     theme: 'light',
     language: 'ko',
-    notification_enabled: true,
   },
   updatePreferences: async () => {},
   resetSession: async () => {},
@@ -47,7 +46,24 @@ export function UserProvider({ children }: UserProviderProps) {
       try {
         console.log('사용자 초기화 시작...');
         
-        // API를 통한 사용자 식별
+        // 먼저 localStorage에서 기존 사용자 정보 확인
+        const existingUser = UserSession.getUser();
+        if (existingUser && existingUser.id) {
+          console.log('기존 사용자 세션 발견:', existingUser.id);
+          setUserId(existingUser.id);
+          setIsNewUser(false);
+          
+          // 기존 설정 로드
+          const userPreferences = getUserPreferences();
+          if (userPreferences) {
+            setPreferences((prev: UserPreferences) => ({ ...prev, ...userPreferences }));
+          }
+          
+          setIsLoading(false);
+          return;
+        }
+        
+        // 기존 세션이 없으면 API를 통한 사용자 식별
         const response = await fetch('/api/user/identify', {
           method: 'GET',
           headers: {
@@ -63,21 +79,42 @@ export function UserProvider({ children }: UserProviderProps) {
         const identityResponse = await response.json();
         console.log('사용자 식별 성공:', identityResponse);
         
-        setUserId(identityResponse.id || identityResponse.user_id);
+        // 유효한 응답인지 확인
+        const userId = identityResponse.id || identityResponse.user_id;
+        if (!userId) {
+          throw new Error('유효하지 않은 사용자 ID');
+        }
+        
+        setUserId(userId);
         setIsNewUser(identityResponse.is_new || false);
+
+        // User 객체 생성하여 localStorage에 저장
+        const userObject = {
+          id: userId,
+          email: identityResponse.email || '',
+          name: identityResponse.name || 'Guest User',
+          role: (identityResponse.role || 'guest') as UserRole,
+          createdAt: new Date(identityResponse.createdAt || new Date().toISOString()),
+          updatedAt: new Date(identityResponse.updatedAt || new Date().toISOString())
+        };
+        
+        // 안전하게 사용자 세션 저장
+        UserSession.setUser(userObject);
 
         // 사용자 설정 로드
         const userPreferences = getUserPreferences();
         if (userPreferences) {
-          setPreferences(prev => ({ ...prev, ...userPreferences }));
+          setPreferences((prev: UserPreferences) => ({ ...prev, ...userPreferences }));
         }
         
         console.log('사용자 초기화 완료:', { 
-          userId: identityResponse.id || identityResponse.user_id, 
+          userId, 
           isNew: identityResponse.is_new 
         });
       } catch (error) {
         console.error('사용자 초기화 오류:', error);
+        // 오류 시 localStorage 정리
+        UserSession.clearUser();
       } finally {
         setIsLoading(false);
       }
@@ -90,7 +127,7 @@ export function UserProvider({ children }: UserProviderProps) {
   const updatePreferences = async (newPreferences: UserPreferences) => {
     try {
       updateUserPreferences(newPreferences);
-      setPreferences(prev => ({ ...prev, ...newPreferences }));
+      setPreferences((prev: UserPreferences) => ({ ...prev, ...newPreferences }));
     } catch (error) {
       console.error('설정 업데이트 오류:', error);
     }
@@ -112,8 +149,24 @@ export function UserProvider({ children }: UserProviderProps) {
 
       if (response.ok) {
         const identityResponse = await response.json();
-        setUserId(identityResponse.id || identityResponse.user_id);
-        setIsNewUser(true);
+        const userId = identityResponse.id || identityResponse.user_id;
+        
+        if (userId) {
+          setUserId(userId);
+          setIsNewUser(true);
+          
+          // 새로운 User 객체 생성하여 저장
+          const userObject = {
+            id: userId,
+            email: '',
+            name: 'Guest User',
+            role: 'guest' as UserRole,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+          
+          UserSession.setUser(userObject);
+        }
       }
       
       // 기본 설정으로 초기화

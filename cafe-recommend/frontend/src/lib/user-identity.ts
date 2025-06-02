@@ -312,9 +312,28 @@ export class UserSession {
     
     try {
       const userJson = localStorage.getItem(UserSession.SESSION_KEY)
-      return userJson ? JSON.parse(userJson) : null
+      
+      // null, undefined, 빈 문자열, "undefined" 문자열 처리
+      if (!userJson || userJson === 'undefined' || userJson === 'null') {
+        // 잘못된 값이 저장된 경우 정리
+        localStorage.removeItem(UserSession.SESSION_KEY)
+        return null
+      }
+      
+      const parsedUser = JSON.parse(userJson)
+      
+      // 파싱된 결과가 유효한 객체인지 확인
+      if (!parsedUser || typeof parsedUser !== 'object' || !parsedUser.id) {
+        console.warn('Invalid user data in localStorage, clearing...')
+        localStorage.removeItem(UserSession.SESSION_KEY)
+        return null
+      }
+      
+      return parsedUser
     } catch (error) {
       console.error('Failed to parse user session:', error)
+      // 파싱 오류 시 localStorage 정리
+      localStorage.removeItem(UserSession.SESSION_KEY)
       return null
     }
   }
@@ -326,7 +345,14 @@ export class UserSession {
     if (typeof window === 'undefined') return
     
     try {
+      // 유효한 사용자 객체인지 확인
+      if (!user || !user.id) {
+        console.error('Invalid user object provided to setUser')
+        return
+      }
+      
       localStorage.setItem(UserSession.SESSION_KEY, JSON.stringify(user))
+      console.log('User session saved successfully:', user.id)
     } catch (error) {
       console.error('Failed to save user session:', error)
     }
@@ -340,6 +366,7 @@ export class UserSession {
     
     localStorage.removeItem(UserSession.SESSION_KEY)
     localStorage.removeItem(UserSession.TOKEN_KEY)
+    console.log('User session cleared')
   }
 
   /**
@@ -347,7 +374,8 @@ export class UserSession {
    */
   static getToken(): string | null {
     if (typeof window === 'undefined') return null
-    return localStorage.getItem(UserSession.TOKEN_KEY)
+    const token = localStorage.getItem(UserSession.TOKEN_KEY)
+    return token && token !== 'undefined' && token !== 'null' ? token : null
   }
 
   /**
@@ -355,6 +383,10 @@ export class UserSession {
    */
   static setToken(token: string): void {
     if (typeof window === 'undefined') return
+    if (!token || token === 'undefined') {
+      console.error('Invalid token provided to setToken')
+      return
+    }
     localStorage.setItem(UserSession.TOKEN_KEY, token)
   }
 
