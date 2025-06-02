@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1" # .env에서 관리 가능하지만, 보통 코드 내 고정
     API_PREFIX: str = "/api/v1" # .env에서 관리 가능하지만, 보통 코드 내 고정
     
-    # 보안 설정 (필수: .env에서 로드)
-    SECRET_KEY: str
+    # 보안 설정 (기본값 추가)
+    SECRET_KEY: str = "test_secret_key_change_in_production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     JWT_ALGORITHM: str = "HS256"
     
@@ -34,8 +34,8 @@ class Settings(BaseSettings):
     # 암호화 키 (API 키 암호화용, 선택적: .env에서 로드)
     ENCRYPTION_KEY: Optional[str] = None
     
-    # 데이터베이스 설정 (필수: .env에서 로드, 경로 보정 필요시 수행)
-    DATABASE_URL: str 
+    # 데이터베이스 설정 (기본값 추가)
+    DATABASE_URL: str = "sqlite:///./cafe_app.db"
 
     # CORS 설정 (.env에서 로드, 문자열을 리스트로 변환)
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["https://cafeproj-q9ri.onrender.com", "http://localhost:3000"]
@@ -60,24 +60,24 @@ class Settings(BaseSettings):
     CACHE_TIMEOUT: int = 300
     
     # 카카오페이 설정 (필수: .env에서 로드)
-    KAKAO_SECRET_KEY_DEV: str
-    KAKAO_PAY_API_URL: AnyHttpUrl
-    KAKAO_CID: str
+    KAKAO_SECRET_KEY_DEV: str = "test_kakao_secret_key"
+    KAKAO_PAY_API_URL: AnyHttpUrl = "https://open-api.kakaopay.com"
+    KAKAO_CID: str = "test_cid"
     
     # 네이버페이 설정 (필수: .env에서 로드)
-    NAVER_PAY_API_URL: AnyHttpUrl
-    NAVER_PAY_PARTNER_ID: str
-    NAVER_PAY_CLIENT_ID: str
-    NAVER_PAY_CLIENT_SECRET: str
-    NAVER_PAY_CHAIN_ID: str
+    NAVER_PAY_API_URL: AnyHttpUrl = "https://dev.apis.naver.com"
+    NAVER_PAY_PARTNER_ID: str = "test_partner_id"
+    NAVER_PAY_CLIENT_ID: str = "test_client_id"
+    NAVER_PAY_CLIENT_SECRET: str = "test_client_secret"
+    NAVER_PAY_CHAIN_ID: str = "test_chain_id"
     
-    # OpenAI API 설정 (필수: .env에서 로드)
-    OPENAI_API_KEY: str
+    # OpenAI API 설정 (기본값 추가)
+    OPENAI_API_KEY: str = "test_openai_api_key"
     OPENAI_MODEL: str = "gpt-4-turbo-preview"
     
-    # 초기 관리자 계정 설정 (.env에서 로드)
-    FIRST_SUPERUSER: EmailStr
-    FIRST_SUPERUSER_PASSWORD: str
+    # 초기 관리자 계정 설정 (기본값 추가)
+    FIRST_SUPERUSER: EmailStr = "admin@test.com"
+    FIRST_SUPERUSER_PASSWORD: str = "test_password"
     
     # 기타 설정
     TESTING: bool = False # .env에서 관리
