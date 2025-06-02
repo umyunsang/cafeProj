@@ -25,9 +25,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await response.json();
-    console.log('User identify data received from backend:', data);
-    return NextResponse.json(data);
+    const backendData = await response.json();
+    console.log('User identify data received from backend:', backendData);
+    
+    // 백엔드 응답을 프론트엔드가 기대하는 User 형태로 변환
+    const userData = {
+      id: backendData.user_id,
+      user_id: backendData.user_id, // 백호환성을 위해 둘 다 포함
+      is_new: backendData.is_new,
+      email: '',  // 기본값
+      name: 'Guest User',  // 기본값
+      role: 'guest' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log('Transformed user data:', userData);
+    return NextResponse.json(userData);
   } catch (error) {
     console.error('User Identify API Error:', error);
     return NextResponse.json(
