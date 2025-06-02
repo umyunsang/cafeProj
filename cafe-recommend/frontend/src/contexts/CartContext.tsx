@@ -320,12 +320,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('장바구니 추가 요청 - 세션 ID:', currentSessionId, '메뉴 ID:', menuId, '수량:', quantity);
 
-      const data = await apiClient.post<Cart>('/api/cart/items', {
-        data: { menu_id: menuId, quantity },
-        headers: {
-          'X-Session-ID': currentSessionId
+      const data = await apiClient.post<Cart>('/api/cart/items', 
+        { menu_id: menuId, quantity }, 
+        {
+          headers: {
+            'X-Session-ID': currentSessionId
+          }
         }
-      });
+      );
       
       console.log('장바구니 항목 추가 결과:', data);
       setCart(data);
@@ -397,12 +399,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // API 클라이언트를 통한 호출
-      const data = await apiClient.put<Cart>(`/api/cart/items/${itemId}`, {
-        data: { quantity },
-        headers: {
-          'X-Session-ID': currentSessionId
+      const data = await apiClient.put<Cart>(`/api/cart/items/${itemId}`, 
+        { quantity }, 
+        {
+          headers: {
+            'X-Session-ID': currentSessionId
+          }
         }
-      });
+      );
       
       console.log('장바구니 항목 수정 결과:', data);
       setCart(data);
@@ -433,16 +437,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // API 클라이언트를 통한 호출
-      const data = await apiClient.put<Cart>(`/api/cart/items/${itemId}`, {
-        data: { 
+      const data = await apiClient.put<Cart>(`/api/cart/items/${itemId}`, 
+        { 
           quantity,
           options: options || [],
           special_requests: specialInstructions
-        },
-        headers: {
-          'X-Session-ID': sessionId
+        }, 
+        {
+          headers: {
+            'X-Session-ID': sessionId
+          }
         }
-      });
+      );
       
       console.log('장바구니 항목 옵션 수정 결과:', data);
       
