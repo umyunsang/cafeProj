@@ -5,11 +5,20 @@ const BACKEND_URL = process.env.BACKEND_URL || 'https://cafe-backend-jv0t.onrend
 
 export async function GET(request: NextRequest) {
   try {
-    const sessionId = request.headers.get('X-Session-ID') || request.cookies.get('session_id')?.value;
+    // 헤더에서 세션 ID 우선 확인 (CartContext에서 전달)
+    let sessionId = request.headers.get('X-Session-ID');
+    
+    // 헤더에 없으면 쿠키에서 확인 (여러 이름으로)
+    if (!sessionId) {
+      sessionId = request.cookies.get('cafe_session_id')?.value || 
+                  request.cookies.get('session_id')?.value ||
+                  request.cookies.get('cafe_user_id')?.value;
+    }
+    
     console.log('Forwarding cart GET request to backend with session ID:', sessionId);
     
     if (!sessionId) {
-      console.error('Session ID not found');
+      console.error('Session ID not found in headers or cookies');
       return NextResponse.json(
         { error: '세션이 유효하지 않습니다. 다시 로그인해주세요.' },
         { status: 401 }
@@ -49,11 +58,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const sessionId = request.headers.get('X-Session-ID') || request.cookies.get('session_id')?.value;
+    // 헤더에서 세션 ID 우선 확인 (CartContext에서 전달)
+    let sessionId = request.headers.get('X-Session-ID');
+    
+    // 헤더에 없으면 쿠키에서 확인 (여러 이름으로)
+    if (!sessionId) {
+      sessionId = request.cookies.get('cafe_session_id')?.value || 
+                  request.cookies.get('session_id')?.value ||
+                  request.cookies.get('cafe_user_id')?.value;
+    }
+    
     console.log('Forwarding cart POST request to backend with session ID:', sessionId);
     
     if (!sessionId) {
-      console.error('Session ID not found');
+      console.error('Session ID not found in headers or cookies');
       return NextResponse.json(
         { error: '세션이 유효하지 않습니다.' },
         { status: 401 }
@@ -96,10 +114,18 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const sessionId = request.headers.get('X-Session-ID') || request.cookies.get('session_id')?.value;
+    // 헤더에서 세션 ID 우선 확인 (CartContext에서 전달)
+    let sessionId = request.headers.get('X-Session-ID');
+    
+    // 헤더에 없으면 쿠키에서 확인 (여러 이름으로)
+    if (!sessionId) {
+      sessionId = request.cookies.get('cafe_session_id')?.value || 
+                  request.cookies.get('session_id')?.value ||
+                  request.cookies.get('cafe_user_id')?.value;
+    }
     
     if (!sessionId) {
-      console.error('Session ID not found');
+      console.error('Session ID not found in headers or cookies');
       return NextResponse.json(
         { error: '세션이 유효하지 않습니다. 다시 로그인해주세요.' },
         { status: 401 }

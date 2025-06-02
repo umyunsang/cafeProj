@@ -4,11 +4,20 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://116.124.191.174:
 
 export async function POST(request: NextRequest) {
   try {
-    const sessionId = request.cookies.get('session_id')?.value;
+    // 헤더에서 세션 ID 우선 확인 (CartContext에서 전달)
+    let sessionId = request.headers.get('X-Session-ID');
+    
+    // 헤더에 없으면 쿠키에서 확인 (여러 이름으로)
+    if (!sessionId) {
+      sessionId = request.cookies.get('cafe_session_id')?.value || 
+                  request.cookies.get('session_id')?.value ||
+                  request.cookies.get('cafe_user_id')?.value;
+    }
+    
     console.log('Adding item to cart with session ID:', sessionId);
     
     if (!sessionId) {
-      console.error('Session ID not found');
+      console.error('Session ID not found in headers or cookies');
       return NextResponse.json(
         { error: '세션이 유효하지 않습니다.' },
         { status: 401 }
@@ -22,7 +31,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `session_id=${sessionId}`
+        'X-Session-ID': sessionId
       },
       body: JSON.stringify(body)
     });
@@ -39,11 +48,21 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     const nextResponse = NextResponse.json(data);
-    nextResponse.cookies.set('session_id', sessionId, {
-      httpOnly: true,
+    
+    // 세션 ID를 모든 쿠키 형태로 저장
+    nextResponse.cookies.set('cafe_session_id', sessionId, {
+      httpOnly: false,
       sameSite: 'lax',
-      path: '/'
+      path: '/',
+      maxAge: 24 * 60 * 60 // 24시간
     });
+    nextResponse.cookies.set('session_id', sessionId, {
+      httpOnly: false,
+      sameSite: 'lax', 
+      path: '/',
+      maxAge: 24 * 60 * 60
+    });
+    
     return nextResponse;
   } catch (error) {
     console.error('Cart Items API Error:', error);
