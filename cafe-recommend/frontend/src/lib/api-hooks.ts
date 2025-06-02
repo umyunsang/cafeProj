@@ -1,6 +1,6 @@
 import useSWR from 'swr'
 import { useState } from 'react'
-import { api } from './api-client'
+// import { api } from './api-client'  // 임시로 주석처리
 
 // SWR을 위한 fetcher 함수
 const fetcher = (url: string) => fetch(url).then(res => res.json())
@@ -68,7 +68,13 @@ export function useRecommendations(preferences?: any) {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.recommendations.get(prefs || preferences)
+      // 임시로 간단한 fetch 사용
+      const response = await fetch('/api/chat/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prefs || preferences)
+      })
+      const result = await response.json()
       setData(result)
       return result
     } catch (err) {
@@ -98,7 +104,13 @@ export function useCreateMenuItem(): MutationResult<any> {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.menu.create(menuData)
+      // 임시로 간단한 fetch 사용
+      const response = await fetch('/api/admin/menus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(menuData)
+      })
+      const result = await response.json()
       setData(result)
       return result
     } catch (err) {
@@ -122,7 +134,13 @@ export function useUpdateMenuItem(): MutationResult<any> {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.menu.update(id, menuData)
+      // 임시로 간단한 fetch 사용
+      const response = await fetch(`/api/admin/menus/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(menuData)
+      })
+      const result = await response.json()
       setData(result)
       return result
     } catch (err) {
@@ -146,7 +164,12 @@ export function useDeleteMenuItem(): MutationResult<any> {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.menu.delete(id)
+      // 임시로 간단한 fetch 사용
+      const response = await fetch(`/api/admin/menus/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      const result = await response.json()
       setData(result)
       return result
     } catch (err) {
@@ -171,7 +194,13 @@ export function useCreateIngredient(): MutationResult<any> {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.ingredients.create(ingredientData)
+      // 임시로 간단한 fetch 사용
+      const response = await fetch('/api/admin/ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ingredientData)
+      })
+      const result = await response.json()
       setData(result)
       return result
     } catch (err) {
@@ -195,7 +224,13 @@ export function useUpdateIngredient(): MutationResult<any> {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.ingredients.update(id, ingredientData)
+      // 임시로 간단한 fetch 사용
+      const response = await fetch(`/api/admin/ingredients/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ingredientData)
+      })
+      const result = await response.json()
       setData(result)
       return result
     } catch (err) {
@@ -219,7 +254,13 @@ export function useRestockIngredient(): MutationResult<any> {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.ingredients.restock(id, restockData)
+      // 임시로 간단한 fetch 사용
+      const response = await fetch(`/api/admin/ingredients/${id}/restock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(restockData)
+      })
+      const result = await response.json()
       setData(result)
       return result
     } catch (err) {
@@ -244,7 +285,13 @@ export function useCreateOrder(): MutationResult<any> {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.orders.create(orderData)
+      // 임시로 간단한 fetch 사용
+      const response = await fetch('/api/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      })
+      const result = await response.json()
       setData(result)
       return result
     } catch (err) {
@@ -268,7 +315,13 @@ export function useUpdateOrder(): MutationResult<any> {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.orders.update(id, orderData)
+      // 임시로 간단한 fetch 사용
+      const response = await fetch(`/api/admin/orders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      })
+      const result = await response.json()
       setData(result)
       return result
     } catch (err) {

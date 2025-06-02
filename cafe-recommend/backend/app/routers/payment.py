@@ -51,7 +51,7 @@ async def get_payment_config(provider: str, db: Session):
     config = db.query(PaymentSettings).filter(PaymentSettings.provider == provider).first()
     if not config or not config.is_active:
         try:
-            from ..models.payment_settings import PaymentSettings
+            # 중복된 import 제거 - 이미 상단에서 import됨
             settings_config = db.query(PaymentSettings).filter(PaymentSettings.provider == provider).first()
             if settings_config and settings_config.is_active:
                 return settings_config

@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://116.124.191.174:15049/api';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // Next.js 15에서는 params를 await 해야 함
+    const { id } = await params;
+    
     // 헤더에서 세션 ID 우선 확인 (CartContext에서 전달)
     let sessionId = request.headers.get('X-Session-ID');
     
@@ -14,7 +17,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
                   request.cookies.get('cafe_user_id')?.value;
     }
     
-    console.log('Updating cart item with session ID:', sessionId, 'Item ID:', params.id);
+    console.log('Updating cart item with session ID:', sessionId, 'Item ID:', id);
     
     if (!sessionId) {
       console.error('Session ID not found in headers or cookies');
@@ -27,7 +30,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json();
     console.log('Updating cart item:', body);
     
-    const response = await fetch(`${API_BASE_URL}/cart/items/${params.id}`, {
+    const response = await fetch(`${API_BASE_URL}/cart/items/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -57,8 +60,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // Next.js 15에서는 params를 await 해야 함
+    const { id } = await params;
+    
     // 헤더에서 세션 ID 우선 확인 (CartContext에서 전달)
     let sessionId = request.headers.get('X-Session-ID');
     
@@ -69,7 +75,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
                   request.cookies.get('cafe_user_id')?.value;
     }
     
-    console.log('Deleting cart item with session ID:', sessionId, 'Item ID:', params.id);
+    console.log('Deleting cart item with session ID:', sessionId, 'Item ID:', id);
     
     if (!sessionId) {
       console.error('Session ID not found in headers or cookies');
@@ -79,7 +85,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
     
-    const response = await fetch(`${API_BASE_URL}/cart/items/${params.id}`, {
+    const response = await fetch(`${API_BASE_URL}/cart/items/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
