@@ -40,12 +40,17 @@ const nextConfig = {
   trailingSlash: false,
   reactStrictMode: true,
   
+  // 개발 환경에서 cross origin 요청 허용
+  allowedDevOrigins: ['116.124.191.174'],
+  
   // 이미지 최적화 설정
   images: {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24, // 24시간
     formats: ['image/webp'],
+    // 개발 환경에서는 이미지 최적화를 비활성화하여 한글 URL 문제 완화
+    unoptimized: process.env.NODE_ENV === 'development',
     remotePatterns: [
       {
         protocol: backendProtocol,
@@ -53,17 +58,22 @@ const nextConfig = {
         port: backendPort,
         pathname: '/static/**', // 백엔드 정적 파일 경로
       },
+      // 명시적으로 116.124.191.174 호스트 추가
+      {
+        protocol: 'http',
+        hostname: '116.124.191.174',
+        port: '15049',
+        pathname: '/static/**',
+      },
       // 로컬 개발 환경에서 localhost 및 127.0.0.1 명시적 허용 (다른 포트 사용 가능성)
       {
         protocol: 'http',
         hostname: 'localhost',
-        // port: backendPort, // localhost의 다른 포트도 허용하려면 port 지정 제거 또는 와일드카드 사용
         pathname: '/static/**',
       },
       {
         protocol: 'http',
         hostname: '127.0.0.1',
-        // port: backendPort,
         pathname: '/static/**',
       },
        // 필요한 경우 외부 이미지 도메인 추가
@@ -89,6 +99,9 @@ const nextConfig = {
         hostname: "placehold.co",
       },
     ],
+    // 개발 중에는 더 관대한 설정을 위해 unoptimized 옵션을 추가할 수 있음
+    // 그러나 remotePatterns를 제대로 설정하는 것이 더 좋음
+    // unoptimized: process.env.NODE_ENV === 'development',
     // domains는 remotePatterns 사용 시 더 이상 권장되지 않음.
     // domains: [backendHostname, 'localhost', '127.0.0.1', '116.124.191.174'], 
   },
@@ -175,11 +188,20 @@ const nextConfig = {
   
   // API 경로 재작성 설정
   async rewrites() {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const backendUrl = isDevelopment 
+      ? 'http://116.124.191.174:15049'
+      : process.env.NEXT_PUBLIC_BACKEND_URL || 'http://116.124.191.174:15049';
+
+    console.log('API Rewrites Configuration:');
+    console.log('- Environment:', process.env.NODE_ENV);
+    console.log('- Backend URL:', backendUrl);
+    console.log('- NEXT_PUBLIC_BACKEND_URL:', process.env.NEXT_PUBLIC_BACKEND_URL);
+    
     return [
-      // 모든 API 요청을 백엔드 서버로 리다이렉션
       {
         source: '/api/:path*',
-        destination: `${BACKEND_URL}/api/:path*`,
+        destination: `${backendUrl}/api/:path*`,
       },
       // 정적 파일 요청을 백엔드 서버로 리다이렉션
       {
