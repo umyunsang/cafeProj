@@ -320,7 +320,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('장바구니 추가 요청 - 세션 ID:', currentSessionId, '메뉴 ID:', menuId, '수량:', quantity);
 
-      const data = await apiClient.post<Cart>('/api/cart/items', 
+      const data = await apiClient.post<Cart>('/api/cart/items/new', 
         { menu_id: menuId, quantity }, 
         {
           headers: {
