@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { identifyUser, getUserPreferences, updateUserPreferences, clearUserSession, UserPreferences } from '@/lib/user-identity';
+import { getUserPreferences, updateUserPreferences, clearUserSession, UserPreferences } from '@/lib/user-identity';
 
 // 사용자 컨텍스트 타입
 interface UserContextType {
@@ -45,14 +45,37 @@ export function UserProvider({ children }: UserProviderProps) {
   useEffect(() => {
     const initUser = async () => {
       try {
-        // 사용자 식별
-        const identityResponse = await identifyUser();
-        setUserId(identityResponse.user_id);
-        setIsNewUser(identityResponse.is_new);
+        console.log('사용자 초기화 시작...');
+        
+        // API를 통한 사용자 식별
+        const response = await fetch('/api/user/identify', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-cache'
+        });
+
+        if (!response.ok) {
+          throw new Error(`사용자 식별 실패: ${response.status}`);
+        }
+
+        const identityResponse = await response.json();
+        console.log('사용자 식별 성공:', identityResponse);
+        
+        setUserId(identityResponse.id || identityResponse.user_id);
+        setIsNewUser(identityResponse.is_new || false);
 
         // 사용자 설정 로드
-        const userPreferences = await getUserPreferences();
-        setPreferences(prev => ({ ...prev, ...userPreferences }));
+        const userPreferences = getUserPreferences();
+        if (userPreferences) {
+          setPreferences(prev => ({ ...prev, ...userPreferences }));
+        }
+        
+        console.log('사용자 초기화 완료:', { 
+          userId: identityResponse.id || identityResponse.user_id, 
+          isNew: identityResponse.is_new 
+        });
       } catch (error) {
         console.error('사용자 초기화 오류:', error);
       } finally {
@@ -66,8 +89,8 @@ export function UserProvider({ children }: UserProviderProps) {
   // 설정 업데이트 함수
   const updatePreferences = async (newPreferences: UserPreferences) => {
     try {
-      const updatedPreferences = await updateUserPreferences(newPreferences);
-      setPreferences(prev => ({ ...prev, ...updatedPreferences }));
+      updateUserPreferences(newPreferences);
+      setPreferences(prev => ({ ...prev, ...newPreferences }));
     } catch (error) {
       console.error('설정 업데이트 오류:', error);
     }
@@ -76,11 +99,23 @@ export function UserProvider({ children }: UserProviderProps) {
   // 세션 초기화 함수
   const resetSession = async () => {
     try {
-      await clearUserSession();
+      clearUserSession();
+      
       // 새 사용자 식별
-      const identityResponse = await identifyUser();
-      setUserId(identityResponse.user_id);
-      setIsNewUser(true);
+      const response = await fetch('/api/user/identify', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-cache'
+      });
+
+      if (response.ok) {
+        const identityResponse = await response.json();
+        setUserId(identityResponse.id || identityResponse.user_id);
+        setIsNewUser(true);
+      }
+      
       // 기본 설정으로 초기화
       setPreferences(defaultContextValue.preferences);
     } catch (error) {
