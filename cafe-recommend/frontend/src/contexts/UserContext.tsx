@@ -103,8 +103,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const userId = ensureUserId();
       setAnonymousId(userId);
       
-      // 세션 ID 확보
-      const sessionId = ensureSessionId();
+      // 세션 ID 확보 (강제로 생성 보장)
+      let sessionId = ensureSessionId();
+      
+      // 추가 검증: 세션 ID가 여전히 없다면 강제 생성
+      if (!sessionId) {
+        sessionId = generateRandomId();
+        cookieManager.set(SESSION_ID_COOKIE, sessionId, { maxAge: 24 * 60 * 60 });
+        console.log('강제 세션 ID 생성 (fallback):', sessionId);
+      }
+      
       setSessionId(sessionId);
 
       // 사용자 설정 가져오기
@@ -123,10 +131,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       console.log('사용자 정보 초기화 완료:', { userId, sessionId });
+      console.log('UserContext 세션 ID 설정됨:', sessionId);
     } catch (error) {
       console.error('사용자 정보 로드 오류:', error);
       // 오류 발생 시 강제로 재생성
-      regenerateSession();
+      const emergencySessionId = generateRandomId();
+      setSessionId(emergencySessionId);
+      cookieManager.set(SESSION_ID_COOKIE, emergencySessionId, { maxAge: 24 * 60 * 60 });
+      console.log('오류 복구용 세션 ID 생성:', emergencySessionId);
     }
   }, []);
 

@@ -139,7 +139,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // UserContext에서 sessionId가 변경될 때마다 동기화
   useEffect(() => {
     if (userSessionId && userSessionId !== sessionId) {
-      console.log('UserContext 세션 ID 변경됨:', userSessionId);
+      console.log('UserContext 세션 ID 변경 감지됨:', userSessionId);
       setSessionId(userSessionId);
       
       // 스토리지 동기화
@@ -150,16 +150,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [userSessionId, sessionId]);
 
-  // 세션 ID가 없을 때만 초기화
+  // 세션 ID가 없을 때만 초기화 (더 자주 체크)
   useEffect(() => {
     if (!sessionId && !userSessionId) {
-      initializeSessionId();
+      console.log('세션 ID가 없어서 초기화 시도');
+      const initialized = initializeSessionId();
+      if (!initialized) {
+        // 최후의 수단: 직접 생성
+        const fallbackSessionId = `user-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 8)}`;
+        console.log('최후 수단 세션 ID 생성:', fallbackSessionId);
+        setSessionId(fallbackSessionId);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(SESSION_ID_STORAGE_KEY, fallbackSessionId);
+        }
+        cookieManager.set('cafe_session_id', fallbackSessionId, { expires: 7 });
+      }
     }
-  }, [anonymousId, userSessionId]);
+  }, [anonymousId, userSessionId, sessionId]);
+
+  // UserContext의 anonymousId나 sessionId가 변할 때마다 즉시 반응
+  useEffect(() => {
+    if (userSessionId) {
+      console.log('UserContext 세션 ID 감지됨:', userSessionId);
+      setSessionId(userSessionId);
+    }
+  }, [userSessionId]);
 
   // 세션 ID가 세팅된 후에만 fetchCart 호출
   useEffect(() => {
     if (sessionId) {
+      console.log('세션 ID 확인됨, 장바구니 조회:', sessionId);
       fetchCart();
     }
   }, [sessionId]);
@@ -259,15 +279,39 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      // 현재 사용 가능한 세션 ID 확인 (UserContext 우선)
+      // 현재 사용 가능한 세션 ID 확인 (UserContext 우선, 여러 소스에서 확인)
       let currentSessionId = userSessionId || sessionId;
+      
+      // 추가 확인: 쿠키와 localStorage에서도 직접 확인
+      if (!currentSessionId) {
+        const cookieSessionId = cookieManager.get('cafe_session_id');
+        const localStorageSessionId = typeof window !== 'undefined' 
+          ? localStorage.getItem(SESSION_ID_STORAGE_KEY) 
+          : null;
+        currentSessionId = cookieSessionId || localStorageSessionId;
+        
+        if (currentSessionId) {
+          console.log('세션 ID를 쿠키/localStorage에서 복구:', currentSessionId);
+          setSessionId(currentSessionId);
+        }
+      }
       
       if (!currentSessionId) {
         // 마지막 시도: 새로운 세션 ID 생성
         currentSessionId = initializeSessionId();
         
         if (!currentSessionId) {
-          throw new Error('세션 ID를 생성할 수 없습니다. 페이지를 새로고침 해주세요.');
+          // 강제로 새 세션 ID 생성
+          const newSessionId = `user-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 8)}`;
+          console.log('강제 세션 ID 생성:', newSessionId);
+          
+          setSessionId(newSessionId);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(SESSION_ID_STORAGE_KEY, newSessionId);
+          }
+          cookieManager.set('cafe_session_id', newSessionId, { expires: 7 });
+          
+          currentSessionId = newSessionId;
         }
         
         // 잠시 대기하여 상태 업데이트가 완료되도록 함
