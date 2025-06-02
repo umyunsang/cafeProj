@@ -85,7 +85,7 @@ export const useCart = () => {
 };
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { anonymousId } = useUser();
+  const { anonymousId, sessionId: userSessionId } = useUser();
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,16 +97,28 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 세션 ID 초기화 함수
   const initializeSessionId = () => {
-    // 1. localStorage에서 세션 ID 확인
+    // 1. UserContext에서 제공하는 sessionId 우선 사용
+    if (userSessionId) {
+      console.log('UserContext에서 세션 ID 가져옴:', userSessionId);
+      setSessionId(userSessionId);
+      
+      // 모든 스토리지에 동기화
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SESSION_ID_STORAGE_KEY, userSessionId);
+      }
+      cookieManager.set('cafe_session_id', userSessionId, { expires: 7 });
+      return userSessionId;
+    }
+    
+    // 2. localStorage에서 세션 ID 확인
     const storedSessionId = typeof window !== 'undefined' 
       ? localStorage.getItem(SESSION_ID_STORAGE_KEY) 
       : null;
     
-    // 2. 쿠키에서 세션 ID 확인
+    // 3. 쿠키에서 세션 ID 확인
     const cookieSessionId = cookieManager.get('cafe_session_id');
     
-    // 3. anonymousId 사용 (UserContext에서 제공)
-    // 우선순위: localStorage > 쿠키 > anonymousId
+    // 4. anonymousId 사용 (fallback)
     const effectiveSessionId = storedSessionId || cookieSessionId || anonymousId;
     
     if (effectiveSessionId && typeof effectiveSessionId === 'string') {
@@ -117,20 +129,33 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (typeof window !== 'undefined') {
         localStorage.setItem(SESSION_ID_STORAGE_KEY, effectiveSessionId);
       }
-      cookieManager.set('cafe_session_id', effectiveSessionId, { expires: 7 }); // 7일 유효
-      
+      cookieManager.set('cafe_session_id', effectiveSessionId, { expires: 7 });
       return effectiveSessionId;
     }
     
     return null;
   };
 
+  // UserContext에서 sessionId가 변경될 때마다 동기화
+  useEffect(() => {
+    if (userSessionId && userSessionId !== sessionId) {
+      console.log('UserContext 세션 ID 변경됨:', userSessionId);
+      setSessionId(userSessionId);
+      
+      // 스토리지 동기화
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SESSION_ID_STORAGE_KEY, userSessionId);
+      }
+      cookieManager.set('cafe_session_id', userSessionId, { expires: 7 });
+    }
+  }, [userSessionId, sessionId]);
+
   // 세션 ID가 없을 때만 초기화
   useEffect(() => {
-    if (!sessionId) {
+    if (!sessionId && !userSessionId) {
       initializeSessionId();
     }
-  }, [anonymousId]);
+  }, [anonymousId, userSessionId]);
 
   // 세션 ID가 세팅된 후에만 fetchCart 호출
   useEffect(() => {
@@ -144,16 +169,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      // 항상 최신 sessionId 사용
-      let currentSessionId = sessionId;
+      // 현재 사용 가능한 세션 ID 확인 (UserContext 우선)
+      let currentSessionId = userSessionId || sessionId;
+      
       if (!currentSessionId) {
         currentSessionId = initializeSessionId();
       }
+      
       if (!currentSessionId) {
         const emptyCart = { id: 0, session_id: '', items: [], total_price: 0 };
         setCart(emptyCart);
         console.log('CartContext: 세션 ID가 없어 빈 장바구니로 초기화:', emptyCart);
-        console.log('세션 ID가 없어 빈 장바구니를 반환합니다.');
         return;
       }
 
@@ -233,23 +259,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      let currentSessionId = sessionId;
+      // 현재 사용 가능한 세션 ID 확인 (UserContext 우선)
+      let currentSessionId = userSessionId || sessionId;
+      
       if (!currentSessionId) {
-        const currentAnonymousId = anonymousId || cookieManager.getUserId();
-        if (currentAnonymousId) {
-          setSessionId(currentAnonymousId);
-          currentSessionId = currentAnonymousId;
-          
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(SESSION_ID_STORAGE_KEY, currentAnonymousId);
-          }
-          cookieManager.set('cafe_session_id', currentAnonymousId, { expires: 7 });
-          
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } else {
-          throw new Error('세션 ID가 없습니다. 다시 시도해주세요.');
+        // 마지막 시도: 새로운 세션 ID 생성
+        currentSessionId = initializeSessionId();
+        
+        if (!currentSessionId) {
+          throw new Error('세션 ID를 생성할 수 없습니다. 페이지를 새로고침 해주세요.');
         }
+        
+        // 잠시 대기하여 상태 업데이트가 완료되도록 함
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
+
+      console.log('장바구니 추가 요청 - 세션 ID:', currentSessionId, '메뉴 ID:', menuId, '수량:', quantity);
 
       const data = await apiClient.post<Cart>('/api/cart/items', {
         data: { menu_id: menuId, quantity },
@@ -285,13 +310,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      if (!sessionId) {
-        throw new Error('세션 ID가 없습니다. 다시 시도해주세요.');
+      // 현재 사용 가능한 세션 ID 확인 (UserContext 우선)
+      const currentSessionId = userSessionId || sessionId;
+      
+      if (!currentSessionId) {
+        throw new Error('세션 ID가 없습니다. 페이지를 새로고침 해주세요.');
       }
 
       const data = await apiClient.delete<Cart>(`/api/cart/items/${itemId}`, {
         headers: {
-          'X-Session-ID': sessionId
+          'X-Session-ID': currentSessionId
         }
       });
       
@@ -317,15 +345,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      if (!sessionId) {
-        throw new Error('세션 ID가 없습니다. 다시 시도해주세요.');
+      // 현재 사용 가능한 세션 ID 확인 (UserContext 우선)
+      const currentSessionId = userSessionId || sessionId;
+      
+      if (!currentSessionId) {
+        throw new Error('세션 ID가 없습니다. 페이지를 새로고침 해주세요.');
       }
 
       // API 클라이언트를 통한 호출
       const data = await apiClient.put<Cart>(`/api/cart/items/${itemId}`, {
         data: { quantity },
         headers: {
-          'X-Session-ID': sessionId
+          'X-Session-ID': currentSessionId
         }
       });
       
