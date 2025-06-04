@@ -87,7 +87,7 @@ class CRUDOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         return orders, total
 
     def create_with_items(
-        self, db: Session, *, obj_in: OrderCreate, user_id: int
+        self, db: Session, *, obj_in: OrderCreate
     ) -> Order:
         """주문 생성 - 트랜잭션 처리 개선"""
         try:
@@ -119,17 +119,6 @@ class CRUDOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
                 # 로그 추가: OrderItem 생성 직전 값 확인
                 logging.info(f"CRUDOrder.create_with_items: Preparing OrderItem - Menu ID: {item.menu_id}, Menu Name: '{menu_item.name}', Menu Price: {menu_item.price}, Quantity: {item.quantity}, Calculated Unit Price: {menu_item.price}, Calculated Item Total: {item_total}")
 
-                # OrderItem 생성 시 unit_price 명시적 할당
-                db_item = OrderItem(
-                    order_id=db_obj.id,
-                    menu_id=item.menu_id,
-                    quantity=item.quantity,
-                    unit_price=menu_item.price,  # unit_price에 menu_item.price 할당
-                    total_price=item_total,
-                    # menu_name=menu_item.name, # menu_name은 OrderItem 모델에 직접 필드가 없으므로 menu 관계를 통해 가져옴
-                )
-                db_items.append(db_item)
-                
                 items_data.append({
                     "menu_id": item.menu_id,
                     "menu_name": menu_item.name,
@@ -138,21 +127,36 @@ class CRUDOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
                     "total_price": item_total
                 })
 
-            # 주문 생성
+            # 주문 생성 (user_id 제거)
             db_obj = Order(
-                user_id=user_id,
                 total_amount=total_amount,
                 status="pending",
                 payment_method=obj_in.payment_method,
+                session_id=obj_in.session_id,
                 items=json.dumps(items_data, ensure_ascii=False)
             )
             
             db.add(db_obj)
             db.flush()  # ID 생성
             
+            # OrderItem 생성
+            db_items = []
+            for item in obj_in.items:
+                menu_item = menus.get(item.menu_id)
+                item_total = menu_item.price * item.quantity
+                
+                # OrderItem 생성 시 unit_price 명시적 할당
+                db_item = OrderItem(
+                    order_id=db_obj.id,
+                    menu_id=item.menu_id,
+                    quantity=item.quantity,
+                    unit_price=menu_item.price,  # unit_price에 menu_item.price 할당
+                    total_price=item_total,
+                )
+                db_items.append(db_item)
+            
             # OrderItem 연결
-            for order_item in order_items:
-                order_item.order_id = db_obj.id
+            for order_item in db_items:
                 db.add(order_item)
             
             # 주문 카운트 업데이트 - 단일 쿼리로 여러 메뉴 업데이트
@@ -281,7 +285,6 @@ def create_order(db: Session, order_data: OrderCreate) -> Order:
             status="pending",
             payment_method=order_data.payment_method,
             session_id=order_data.session_id, 
-            user_id=getattr(order_data, 'user_id', None),
             delivery_address=getattr(order_data, 'delivery_address', None),
             delivery_request=getattr(order_data, 'delivery_request', None),
             phone_number=getattr(order_data, 'phone_number', None),

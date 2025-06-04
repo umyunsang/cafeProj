@@ -49,6 +49,11 @@ export function useApiQuery<T = any>(endpoint: string | null) { // endpoint가 n
         logout();
         throw new ApiErrorImpl('Unauthorized', response.status);
       }
+      if (response.status === 403) {
+        toast.error('권한이 없습니다. 다시 로그인해주세요.');
+        logout();
+        throw new ApiErrorImpl('Forbidden', response.status);
+      }
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new ApiErrorImpl(errorData.detail || `Request failed with status ${response.status}`, response.status, errorData);
@@ -153,6 +158,15 @@ export function useApiMutation<TData = any, TVariables = any>(
         toast.error('인증이 만료되었습니다. 다시 로그인해주세요.');
         logout();
         throw new ApiErrorImpl('Unauthorized', response.status);
+      }
+      if (response.status === 403) {
+        toast.error('권한이 없습니다. 다시 로그인해주세요.');
+        logout();
+        throw new ApiErrorImpl('Forbidden', response.status);
+      }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiErrorImpl(errorData.detail || `Request failed with status ${response.status}`, response.status, errorData);
       }
       
       let resultJson: TData | null = null;

@@ -26,11 +26,13 @@ async def call_kakaopay_cancel_api(tid: str, cancel_amount: int, cancel_tax_free
         logging.error("카카오 Secret Key (dev)가 설정되지 않았습니다.")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="카카오페이 설정을 확인해주세요.")
 
-    actual_cancel_url = f"{settings.KAKAO_PAY_API_URL}/online/v1/payment/cancel" # config에서 API URL 사용
+    # URL 결합 시 이중 슬래시 방지
+    base_url = str(settings.KAKAO_PAY_API_URL).rstrip('/')
+    actual_cancel_url = f"{base_url}/online/v1/payment/cancel"
 
     headers = {
         "Authorization": f"SECRET_KEY {settings.KAKAO_SECRET_KEY_DEV}", # 새 인증 방식
-        "Content-Type": "application/json;charset=UTF-8", # Content-Type 변경
+        "Content-Type": "application/json", # Content-Type 문서 규격에 맞게 수정
     }
     payload = {
         "cid": settings.KAKAO_CID,
@@ -367,13 +369,16 @@ def serialize_order_item(item: OrderItem) -> AdminOrderItemResponse:
     )
 
 def serialize_order(order: Order) -> AdminOrderResponse:
+    # order_number가 None인 경우 기본값 제공
+    order_number = order.order_number or f"ORD-{order.id:06d}"
+    
     return AdminOrderResponse(
         id=order.id,
-        user_id=order.user_id,
+        user_id=None,
         items=[serialize_order_item(item) for item in order.order_items],
         total_amount=order.total_amount,
         status=order.status,
         payment_method=order.payment_method,
         created_at=order.created_at,
-        order_number=order.order_number
+        order_number=order_number
     ) 

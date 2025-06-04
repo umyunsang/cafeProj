@@ -31,42 +31,33 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCart } from '@/contexts/CartContext';
 
-// Typewriter 컴포넌트 추가
-const Typewriter = ({ text, speed = 30, onFinished, messageId }: { text: string; speed?: number; onFinished?: (id: string) => void; messageId: string; }) => {
+// Typewriter 컴포넌트 최적화
+const Typewriter = ({ text, speed = 15, onFinished, messageId }: { text: string; speed?: number; onFinished?: (id: string) => void; messageId: string; }) => {
   const [displayedText, setDisplayedText] = useState('');
   const currentIndexRef = useRef(0);
 
   useEffect(() => {
     setDisplayedText('');
     currentIndexRef.current = 0;
-    // console.log(`[Typewriter ${messageId}] Initializing. Text: "${text}" (Length: ${text?.length})`);
 
     if (text && text.length > 0) {
       const intervalId = setInterval(() => {
         const charToAdd = text[currentIndexRef.current];
 
-        // console.log(
-        //   `[Typewriter ${messageId}] Interval. Index: ${currentIndexRef.current}, Text Length: ${text.length}, Char: "${charToAdd}"`
-        // );
-
-        if (charToAdd !== undefined) { // 현재 문자가 undefined가 아니면 추가
+        if (charToAdd !== undefined) {
           setDisplayedText((prev) => prev + charToAdd);
           currentIndexRef.current += 1;
-        } else { // 문자열의 끝에 도달하면 (charToAdd가 undefined)
-          // console.log(`[Typewriter ${messageId}] End of text. Clearing interval. Index: ${currentIndexRef.current}, Text Length: ${text.length}`);
+        } else {
           clearInterval(intervalId);
           if (onFinished) {
-            // console.log(`[Typewriter ${messageId}] Calling onFinished.`);
             onFinished(messageId);
           }
         }
       }, speed);
       return () => {
-        // console.log(`[Typewriter ${messageId}] Cleanup: Clearing interval.`);
         clearInterval(intervalId);
       };
     } else {
-      // console.log(`[Typewriter ${messageId}] Text is empty or null. Calling onFinished.`);
       if (onFinished) {
         onFinished(messageId);
       }
@@ -172,7 +163,7 @@ export default function ChatPage() {
       const currentInput = input;
       setInput('');
 
-      const response = await fetch('http://127.0.0.1:15049/api/chat', {
+      const response = await fetch('http://116.124.191.174:15049/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -281,7 +272,6 @@ export default function ChatPage() {
   };
 
   const handleTypingFinished = useCallback((messageId: string) => {
-    // console.log("Finished typing message: ", messageId); // 디버깅 로그
     if (resolvePromiseRef.current) {
       resolvePromiseRef.current();
       resolvePromiseRef.current = null;
@@ -407,7 +397,7 @@ export default function ChatPage() {
                           {message.role === 'assistant' ? (
                             <Typewriter 
                               text={message.content} 
-                              speed={30} 
+                              speed={15} 
                               onFinished={handleTypingFinished}
                               messageId={message.id!}
                             />

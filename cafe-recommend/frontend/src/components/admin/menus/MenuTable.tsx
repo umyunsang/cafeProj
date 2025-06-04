@@ -89,15 +89,15 @@ export const MenuTable = ({
                         className="h-12 w-12 object-cover rounded-md mx-auto border" 
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          // default-menu.jpg는 public/static/menu_images/ 경로에 있다고 가정
-                          if (target.src !== '/static/menu_images/default-menu.jpg') {
-                            target.src = '/static/menu_images/default-menu.jpg';
+                          // default-menu.svg는 public/static/menu_images/ 경로에 있다고 가정
+                          if (target.src !== '/static/menu_images/default-menu.svg') {
+                            target.src = '/static/menu_images/default-menu.svg';
                           }
                         }}
                       />
                     ) : (
                       <img 
-                        src='/static/menu_images/default-menu.jpg' 
+                        src='/static/menu_images/default-menu.svg' 
                         alt="기본 이미지" 
                         className="h-12 w-12 object-cover rounded-md mx-auto border opacity-50"
                       />

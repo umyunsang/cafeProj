@@ -13,6 +13,29 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import Image from 'next/image';
+import { useApiGet } from '@/lib/api-hooks';
+
+// 백엔드 API 응답 인터페이스
+interface MenuApiResponse {
+  id: number;
+  name: string;
+  price: number;
+  description: string | null;
+  category: string;
+  image_url?: string;
+  is_available: boolean;
+}
+
+// 프론트엔드에서 사용할 인터페이스
+interface PopularMenu {
+  id: number;
+  title: string;
+  image: string;
+  rating: number;
+  category: string;
+  description?: string;
+  price: number;
+}
 
 // Card 컴포넌트 메모이제이션 - 반복적으로 사용되는 UI 컴포넌트 성능 최적화
 const FeatureCard = React.memo(({ 
@@ -44,34 +67,33 @@ FeatureCard.displayName = 'FeatureCard';
 
 // 추천 메뉴 카드 컴포넌트
 const PopularItemCard = React.memo(({ 
+  id,
   title, 
   image,
   rating, 
   category,
-  description
-}: { 
-  title: string;
-  image: string;
-  rating: number;
-  category: string;
-  description?: string; 
-}) => (
-  <Card className="bg-white dark:bg-slate-800/80 group overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200 dark:border-slate-700/50 hover:border-primary-500/30 dark:hover:border-primary-400/30 flex flex-col">
+  description,
+  price
+}: PopularMenu) => (
+  <Link href={`/menu/${id}`}>
+    <Card className="bg-white dark:bg-slate-800/80 group overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200 dark:border-slate-700/50 hover:border-primary-500/30 dark:hover:border-primary-400/30 flex flex-col cursor-pointer">
     <div className="relative h-52 bg-slate-100 dark:bg-slate-700 overflow-hidden">
       <Image 
-        src={image || '/static/menu_images/default-menu.jpg'} 
+          src={image || '/static/menu_images/default-menu.svg'} 
         alt={`${title} 이미지`} 
         fill
         style={{ objectFit: "cover" }}
         className="group-hover:scale-110 transition-transform duration-500 ease-in-out"
         onError={(e) => {
           const target = e.target as HTMLImageElement;
-          if (target.src !== '/static/menu_images/default-menu.jpg') {
-            target.src = '/static/menu_images/default-menu.jpg';
+            if (target.src !== '/static/menu_images/default-menu.svg') {
+              target.src = '/static/menu_images/default-menu.svg';
           }
         }}
         sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
         priority={false}
+          unoptimized={true}
+          quality={75}
       />
       <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1">
         <Star className="h-3.5 w-3.5 text-yellow-400" aria-hidden="true" />
@@ -85,6 +107,9 @@ const PopularItemCard = React.memo(({
       <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors mb-1.5">
         {title}
       </h3>
+        <p className="text-lg font-semibold text-primary-600 dark:text-primary-400 mb-2">
+          {price.toLocaleString()}원
+        </p>
       <div className="opacity-0 max-h-0 overflow-hidden group-hover:opacity-100 group-hover:max-h-40 transition-all duration-300 ease-in-out mt-auto pt-2">
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
           {description || '맛있는 메뉴입니다. 상세 설명을 곧 추가할 예정입니다.'}
@@ -95,6 +120,7 @@ const PopularItemCard = React.memo(({
       </Button>
     </div>
   </Card>
+  </Link>
 ));
 
 PopularItemCard.displayName = 'PopularItemCard';
@@ -102,6 +128,12 @@ PopularItemCard.displayName = 'PopularItemCard';
 export default function HomePage() {
   const [isMounted, setIsMounted] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  
+  // 인기 메뉴 데이터 API로 가져오기
+  const { data: popularMenusFromApi, loading: isLoadingPopular, error: popularError } = useApiGet<MenuApiResponse[]>('/api/menus/popular?limit=4', {
+    useCache: true,
+    cacheTTL: 10 * 60 * 1000, // 10분 캐시
+  });
   
   useEffect(() => {
       setIsMounted(true);
@@ -138,37 +170,20 @@ export default function HomePage() {
     }
   ], []);
 
-  // 인기 메뉴 데이터 (실제 서비스에서는 API로 가져올 수 있음)
-  const popularItems = useMemo(() => [
-    {
-      title: "카페 라떼",
-      image: "/static/menu_images/latte.jpg",
-      rating: 4.8,
-      category: "커피",
-      description: "부드러운 우유와 깊은 풍미의 에스프레소가 조화로운 클래식 라떼입니다."
-    },
-    {
-      title: "아메리카노",
-      image: "/static/menu_images/default-menu.jpg",
-      rating: 4.7,
-      category: "커피",
-      description: "신선한 원두로 추출한 에스프레소에 물을 더해 깔끔하고 시원하게 즐길 수 있습니다."
-    },
-    {
-      title: "바닐라 프라푸치노",
-      image: "/static/menu_images/default-menu.jpg",
-      rating: 4.5,
-      category: "프라푸치노",
-      description: "달콤한 바닐라 시럽과 얼음을 함께 갈아 만든 시원하고 부드러운 프라푸치노입니다."
-    },
-    {
-      title: "녹차 라떼",
-      image: "/static/menu_images/green_tea_latte.jpg",
-      rating: 4.6,
-      category: "차",
-      description: "쌉싸름한 국내산 녹차와 부드러운 우유가 만나 더욱 풍부한 맛을 내는 음료입니다."
-    },
-  ], []);
+  // API에서 가져온 데이터를 프론트엔드용으로 변환
+  const popularItems = useMemo(() => {
+    if (!popularMenusFromApi) return [];
+    
+    return popularMenusFromApi.map((menu, index) => ({
+      id: menu.id,
+      title: menu.name,
+      image: menu.image_url || '/static/menu_images/default-menu.svg',
+      rating: 4.5 + (index * 0.1), // 임시 rating (나중에 실제 리뷰 데이터로 교체)
+      category: menu.category,
+      description: menu.description || '맛있는 메뉴입니다. 상세 설명을 곧 추가할 예정입니다.',
+      price: menu.price
+    }));
+  }, [popularMenusFromApi]);
 
   // 하이라이트 기능 - 사용자에게 주요 기능을 강조
   const highlights = useMemo(() => [
@@ -294,6 +309,28 @@ export default function HomePage() {
               </Link>
             </div>
             
+            {isLoadingPopular ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, index) => (
+                  <Card key={index} className="p-4 animate-pulse">
+                    <div className="h-52 bg-slate-200 dark:bg-slate-700 rounded-lg mb-4"></div>
+                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                  </Card>
+                ))}
+              </div>
+            ) : popularError ? (
+              <div className="text-center py-12">
+                <p className="text-slate-600 dark:text-slate-400 mb-4">인기 메뉴를 불러오는데 실패했습니다.</p>
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  다시 시도
+                </Button>
+              </div>
+            ) : popularItems.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-slate-600 dark:text-slate-400">표시할 인기 메뉴가 없습니다.</p>
+              </div>
+            ) : (
             <Carousel
               opts={{
                 align: "start",
@@ -303,14 +340,16 @@ export default function HomePage() {
             >
               <CarouselContent className="-ml-4">
                 {popularItems.map((item, index) => (
-                  <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                    <CarouselItem key={item.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
                     <div className="p-1 h-full">
                       <PopularItemCard 
+                          id={item.id}
                         title={item.title}
                         image={item.image}
                         rating={item.rating}
                         category={item.category}
                         description={item.description}
+                          price={item.price}
                       />
                     </div>
                   </CarouselItem>
@@ -319,6 +358,7 @@ export default function HomePage() {
               <CarouselPrevious className="absolute left-[-50px] top-1/2 -translate-y-1/2 fill-current" />
               <CarouselNext className="absolute right-[-50px] top-1/2 -translate-y-1/2 fill-current" />
             </Carousel>
+            )}
           </section>
 
           {/* 이용 방법 섹션 */}

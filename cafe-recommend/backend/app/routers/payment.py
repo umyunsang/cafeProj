@@ -118,11 +118,11 @@ async def create_order_route(
         # 장바구니 비우기 (주문 성공 후)
         cart = db.query(Cart).filter(Cart.session_id == effective_session_id).first()
         if cart:
-             db.query(CartItem).filter(CartItem.cart_id == cart.id).delete()
-             # 필요 시 Cart 자체도 삭제 or 상태 변경
-             # db.delete(cart)
-             db.commit()
-             logging.info(f"Cart cleared for session {effective_session_id}")
+            db.query(CartItem).filter(CartItem.cart_id == cart.id).delete()
+            # 필요 시 Cart 자체도 삭제 or 상태 변경
+            # db.delete(cart)
+            db.commit()
+            logging.info(f"Cart cleared for session {effective_session_id}")
         
         # 생성된 주문의 ID만 반환 (기존 로직 유지)
         return {"order_id": created_order.id} 
@@ -484,11 +484,13 @@ async def process_kakao_payment(
             
             logging.info(f"카카오페이 결제 준비 요청 데이터 (JSON): {request_data}")
             
+            # URL 결합 시 이중 슬래시 방지
+            base_url = str(settings.KAKAO_PAY_API_URL).rstrip('/')
             api_response = await client.post(
-                f"{settings.KAKAO_PAY_API_URL}/online/v1/payment/ready", # 새 API 엔드포인트
+                f"{base_url}/online/v1/payment/ready", # 이중 슬래시 방지
                 headers={
                     "Authorization": f"SECRET_KEY {kakao_secret_key}", # 새 인증 방식
-                    "Content-Type": "application/json;charset=UTF-8"  # Content-Type 변경
+                    "Content-Type": "application/json"  # Content-Type 문서 규격에 맞게 수정
                 },
                 json=request_data # httpx는 json 파라미터로 dict를 바로 전달 가능
             )
@@ -576,11 +578,13 @@ async def complete_kakao_payment(
             }
             logging.info(f"카카오페이 결제 승인 요청 데이터 (JSON): {approve_request_data}")
             
+            # URL 결합 시 이중 슬래시 방지
+            base_url = str(settings.KAKAO_PAY_API_URL).rstrip('/')
             api_response = await client.post(
-                f"{settings.KAKAO_PAY_API_URL}/online/v1/payment/approve", # 새 API 엔드포인트
+                f"{base_url}/online/v1/payment/approve", # 이중 슬래시 방지
                 headers={
                     "Authorization": f"SECRET_KEY {kakao_secret_key}", # 새 인증 방식
-                    "Content-Type": "application/json;charset=UTF-8"  # Content-Type 변경
+                    "Content-Type": "application/json"  # Content-Type 문서 규격에 맞게 수정
                 },
                 json=approve_request_data # httpx는 json 파라미터로 dict를 바로 전달 가능
             )
@@ -637,12 +641,19 @@ async def complete_kakao_payment(
         ]
         
         final_order_response = OrderResponse(
-            id=db_order.id, order_number=db_order.order_number, user_id=db_order.user_id,
-            total_amount=db_order.total_amount, status=db_order.status,
-            payment_method=db_order.payment_method, payment_key=db_order.payment_key,
-            session_id=db_order.session_id, delivery_address=db_order.delivery_address,
-            delivery_request=db_order.delivery_request, phone_number=db_order.phone_number,
-            created_at=db_order.created_at, updated_at=db_order.updated_at,
+            id=db_order.id,
+            order_number=db_order.order_number,
+            user_id=None,
+            total_amount=db_order.total_amount,
+            status=db_order.status,
+            payment_method=db_order.payment_method,
+            payment_key=db_order.payment_key,
+            session_id=db_order.session_id,
+            delivery_address=db_order.delivery_address,
+            delivery_request=db_order.delivery_request,
+            phone_number=db_order.phone_number,
+            created_at=db_order.created_at,
+            updated_at=db_order.updated_at,
             items=order_items_data
         )
         return {"status": "success", "message": "결제가 성공적으로 완료되었습니다.", "order": final_order_response.model_dump()}
@@ -702,7 +713,7 @@ async def get_order(
     return OrderResponse(
         id=order.id,
         order_number=order.order_number,
-        user_id=order.user_id,
+        user_id=None,
         total_amount=order.total_amount,
         status=order.status,
         payment_method=order.payment_method,
@@ -813,11 +824,11 @@ async def cancel_naver_payment(order_id: int, db: Session = Depends(get_db)):
                 return OrderResponse(
                     id=order.id,
                     order_number=order.order_number,
-                    user_id=order.user_id,
+                    user_id=None,
                     total_amount=order.total_amount,
                     status=order.status,
                     payment_method=order.payment_method,
-                    payment_key=order.payment_key, # paymentId는 유지될 수 있음
+                    payment_key=order.payment_key,
                     session_id=order.session_id,
                     created_at=order.created_at,
                     updated_at=order.updated_at,
@@ -882,9 +893,9 @@ async def cancel_kakao_payment(order_id: int, db: Session = Depends(get_db)) -> 
     kakao_secret_key = payment_provider_config["secret_key"]
     kakao_cid = payment_provider_config["additional_settings"]["cid"]
 
-    # 카카오페이 취소 API URL (기존과 동일하나, open-api로 변경된 KAKAO_PAY_API_URL 사용)
-    # 새 API 문서에서는 /online/v1/payment/cancel 로 명시됨
-    cancel_url = f"{settings.KAKAO_PAY_API_URL}/online/v1/payment/cancel"
+    # 카카오페이 취소(환불) API URL
+    base_url = str(settings.KAKAO_PAY_API_URL).rstrip('/')
+    cancel_url = f"{base_url}/online/v1/payment/cancel"
 
     headers = {
         "Authorization": f"SECRET_KEY {kakao_secret_key}",
@@ -933,7 +944,7 @@ async def cancel_kakao_payment(order_id: int, db: Session = Depends(get_db)) -> 
                 return OrderResponse(
                     id=order.id,
                     order_number=order.order_number,
-                    user_id=order.user_id,
+                    user_id=None,
                     total_amount=order.total_amount,
                     status=order.status,
                     payment_method=order.payment_method,
@@ -952,22 +963,18 @@ async def cancel_kakao_payment(order_id: int, db: Session = Depends(get_db)) -> 
                 #     raise HTTPException(status_code=400, detail="Already cancelled on Kakao Pay.")
                 raise HTTPException(status_code=400, detail=f"Kakao Pay cancellation failed: {error_msg}")
 
-    except httpx.HTTPStatusError as e:
-        # HTTP 오류 (4xx, 5xx)
-        error_body = "Unknown error" 
-        try:
-            error_body = e.response.text # 오류 본문 읽기 시도
-        except Exception:
-            pass
-        logging.error(f"HTTP error calling Kakao Pay cancel API for Order {order.id}: {e.response.status_code} - {error_body}")
-        # 401 Unauthorized 등 특정 오류 처리
-        if e.response.status_code == 401:
-            raise HTTPException(status_code=401, detail="Kakao Pay authorization failed.")
-        raise HTTPException(status_code=e.response.status_code, detail=f"Failed to communicate with Kakao Pay cancel API: Status {e.response.status_code}")
+    except httpx.RequestError as exc:
+        logging.error(f"카카오페이 결제 승인 API 요청 중 네트워크 오류: {exc}")
+        db_order.status = "payment_failed"
+        db.commit()
+        raise HTTPException(status_code=503, detail="카카오페이 서비스와 통신 중 오류가 발생했습니다.")
     except Exception as e:
-        # 기타 예외
-        logging.exception(f"An unexpected error occurred during Kakao Pay cancellation for Order {order.id}")
-        raise HTTPException(status_code=500, detail=f"An internal server error occurred during Kakao Pay cancellation: {str(e)}") 
+        db.rollback()
+        logging.exception(f"카카오페이 결제 완료 처리 중 예상치 못한 서버 내부 오류 (Order ID: {order_id}): {str(e)}")
+        if db_order and db_order.status == "pending": # 아직 paid로 변경 전이면
+            db_order.status = "payment_failed"
+            db.commit()
+        raise HTTPException(status_code=500, detail=f"서버 내부 오류: {str(e)}")
 
 @router.post("/refund", response_model=RefundResponse)
 async def refund_payment(
@@ -1040,7 +1047,8 @@ async def refund_kakao_payment(order, refund_amount, refund_id, db):
     kakao_cid = payment_provider_config["additional_settings"]["cid"]
 
     # 카카오페이 취소(환불) API URL
-    cancel_url = f"{settings.KAKAO_PAY_API_URL}/online/v1/payment/cancel"
+    base_url = str(settings.KAKAO_PAY_API_URL).rstrip('/')
+    cancel_url = f"{base_url}/online/v1/payment/cancel"
 
     headers = {
         "Authorization": f"SECRET_KEY {kakao_secret_key}",
@@ -1073,12 +1081,12 @@ async def refund_kakao_payment(order, refund_amount, refund_id, db):
         # 성공 시, 취소(환불)된 금액 등의 정보를 반환할 수 있음
         return response_data
         
-    except httpx.RequestError as e:
-        logging.error(f"카카오페이 환불(취소) API 요청 중 네트워크 오류: {str(e)}")
-        raise HTTPException(status_code=503, detail=f"카카오페이 서비스 통신 중 오류가 발생했습니다: {str(e)}")
+    except httpx.RequestError as exc:
+        logging.error(f"카카오페이 환불(취소) API 요청 중 네트워크 오류: {exc}")
+        raise HTTPException(status_code=503, detail=f"카카오페이 서비스와 통신 중 오류가 발생했습니다: {str(exc)}")
     except Exception as e:
-        logging.error(f"카카오페이 환불(취소) 처리 중 오류: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"카카오페이 환불(취소) 처리 중 오류: {str(e)}")
+        logging.exception(f"카카오페이 환불(취소) 처리 중 예상치 못한 서버 내부 오류 (Order ID: {order.id}): {str(e)}")
+        raise HTTPException(status_code=500, detail=f"서버 내부 오류: {str(e)}")
 
 async def refund_naver_payment(order, refund_amount, refund_id, db):
     """네이버페이 환불 처리 함수"""

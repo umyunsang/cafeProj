@@ -2,13 +2,13 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.database import Base
-from app.models.inventory import MenuIngredient
+from app.db.base import Base
+# from app.models.inventory import MenuIngredient # MenuIngredient 모델이 아직 없으므로 주석 처리
 
 if TYPE_CHECKING:
     from .order import OrderItem  # noqa: F401
     from .cart import CartItem  # noqa: F401
-    from .review import Review  # noqa: F401
+    # from .review import Review  # noqa: F401 # Review 모델이 아직 없으므로 주석 처리
 
 class MenuItem(Base):
     __tablename__ = "menus"
@@ -43,10 +43,10 @@ class MenuItem(Base):
     
     # 관계 설정
     order_items = relationship("app.models.order.OrderItem", back_populates="menu")
-    reviews = relationship("app.models.review.Review", back_populates="menu")
+    # reviews = relationship("app.models.review.Review", back_populates="menu") # Review 모델이 아직 없으므로 주석 처리
     
     # 재료 관계 설정
-    ingredients = relationship("app.models.inventory.MenuIngredient", back_populates="menu", cascade="all, delete-orphan")
+    # ingredients = relationship("app.models.inventory.MenuIngredient", back_populates="menu", cascade="all, delete-orphan") # MenuIngredient 모델이 아직 없으므로 주석 처리
 
     def get_menu_text(self):
         """메뉴 정보를 텍스트로 반환"""

@@ -5,13 +5,13 @@ import { Button, type ButtonProps as ShadcnButtonProps } from '@/components/ui/b
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react'; // lucide-react의 로더 아이콘 사용
 
-interface LoadingButtonProps extends ShadcnButtonProps {
+interface LoadingButtonProps extends Omit<ShadcnButtonProps, 'size' | 'variant'> {
   isLoading: boolean;
   loadingText?: string;
   icon?: React.ReactNode; // 일반 상태일 때의 아이콘 (옵션)
   children: React.ReactNode; // 일반 상태일 때의 버튼 텍스트
-  size: ShadcnButtonProps['size'];
-  variant: ShadcnButtonProps['variant'];
+  size?: ShadcnButtonProps['size'];
+  variant?: ShadcnButtonProps['variant'];
 }
 
 export function LoadingButton({
@@ -21,8 +21,8 @@ export function LoadingButton({
   children,
   className,
   disabled,
-  size,
-  variant,
+  size = 'default',
+  variant = 'default',
   ...props
 }: LoadingButtonProps) {
   return (

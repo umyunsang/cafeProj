@@ -49,7 +49,7 @@ export function MenuCard({
     router.push(`/menu/${id}`);
   };
   
-  const defaultImageUrl = '/static/menu_images/default-menu.jpg';
+  const defaultImageUrl = '/static/menu_images/default-menu.svg';
 
   // 이미지 경로가 /static/menu_images/로 시작하면 그대로 사용하고, 그렇지 않으면 defaultImageUrl 사용
   const finalImageUrl = imageUrl || defaultImageUrl;

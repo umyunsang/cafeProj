@@ -7,7 +7,7 @@ import asyncio
 import json
 
 from app.api.deps import get_db
-from app.models.inventory import Ingredient, IngredientStock
+# from app.models.inventory import Ingredient, IngredientStock  # inventory 모델 문제로 임시 비활성화
 from app.models.order import Order
 from app.schemas.notifications import (
     StockAlertNotification,

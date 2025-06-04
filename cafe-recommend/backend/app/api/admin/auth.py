@@ -79,6 +79,39 @@ def get_admin_by_email_from_db(db_path_setting: str, email: str) -> Optional[tup
         logger.error(f"[DB_ACCESS_AUTH] Generic error in get_admin_by_email_from_db for {db_path}: {str(e)}")
         return None
 
+def get_admin_by_id_from_db(database_url: str, user_id: int):
+    """ID로 관리자 정보를 조회하는 함수"""
+    if not database_url.startswith("sqlite:///"):
+        logger.error(f"Unsupported database URL: {database_url}")
+        return None
+    
+    db_path = database_url[len("sqlite:///"):]
+    
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # 사용자 ID로 관리자 정보 조회
+        cursor.execute("""
+            SELECT id, email, hashed_password, is_superuser, is_active 
+            FROM admins 
+            WHERE id = ? AND is_superuser = 1
+        """, (user_id,))
+        
+        admin_user_info = cursor.fetchone()
+        conn.close()
+        
+        if admin_user_info:
+            logger.info(f"관리자 정보 조회 성공 (ID로): user_id={user_id}")
+        else:
+            logger.warning(f"관리자 정보 없음 (ID로): user_id={user_id}")
+        
+        return admin_user_info
+        
+    except Exception as e:
+        logger.exception(f"데이터베이스 조회 중 오류 발생 (ID로): {str(e)}")
+        return None
+
 @router.post("/login", response_model=Token)
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     logger.info(f"관리자 로그인 시도: 이메일={form_data.username}")
@@ -189,6 +222,62 @@ async def register(admin_user_in: AdminCreate, db: Session = Depends(get_db)):
     # 반환되는 객체는 Admin 모델 객체를 AdminCreate 스키마 형태로 변환해야 할 수 있으나, 
     # FastAPI가 response_model에 따라 자동으로 처리해 줄 것입니다.
     return db_admin_obj
+
+@router.get("/verify-token")
+async def verify_token(request: Request, token: str = Depends(oauth2_scheme)):
+    """
+    토큰 유효성 검사 API
+    """
+    try:
+        # JWT 토큰 디코딩 및 검증
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        
+        if user_id is None:
+            logger.warning("토큰에 sub 클레임이 없습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # 데이터베이스에서 사용자 확인
+        admin_user_info = get_admin_by_id_from_db(settings.DATABASE_URL, int(user_id))
+        
+        if not admin_user_info:
+            logger.warning(f"토큰의 사용자 ID가 데이터베이스에 없습니다: {user_id}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        user_id_db, email, hashed_password, is_superuser, is_active = admin_user_info
+        
+        if not is_active:
+            logger.warning(f"비활성화된 사용자: {email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User account is disabled",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        logger.info(f"토큰 검증 성공: user_id={user_id}, email={email}")
+        return {"valid": True, "user_id": user_id, "email": email}
+        
+    except JWTError as e:
+        logger.error(f"JWT 토큰 검증 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception as e:
+        logger.exception(f"토큰 검증 중 예외 발생: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Token verification failed"
+        )
 
 # WebSocket 인증 부분은 이미 deps.py에서 get_current_admin_ws를 사용하도록 변경되었으므로,
 # 이 파일 내의 get_current_admin_ws 함수는 제거하거나 주석 처리하는 것이 좋습니다.

@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminLogin() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,11 +24,11 @@ export default function AdminLogin() {
     // 여기서는 process.env.NODE_ENV를 직접 사용하지만, 실제 프로덕션에서는 주의가 필요합니다.
     setIsDevelopment(process.env.NODE_ENV === 'development'); 
     
-    const token = localStorage.getItem('adminToken');
-    if (token) {
-      router.push('/admin/menus');
+    // AuthContext에서 인증 상태가 로딩 완료되고 이미 인증된 경우 리다이렉션
+    if (!authLoading && isAuthenticated) {
+      router.push('/admin/dashboard');
     }
-  }, [router]);
+  }, [router, authLoading, isAuthenticated]);
 
   const validateForm = () => {
     if (!email.trim()) {
@@ -62,7 +62,7 @@ export default function AdminLogin() {
       formData.append('username', email);
       formData.append('password', password);
 
-      const response = await fetch('/api/admin/auth/login', {
+      const response = await fetch('http://116.124.191.174:15049/api/admin/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -84,7 +84,7 @@ export default function AdminLogin() {
       await login(data.access_token, { id: 'temp-user-id', email: email });
 
       toast.success('로그인 성공');
-      router.push('/admin/menus');
+      router.push('/admin/dashboard');
     } catch (error) {
       console.error('로그인 실패:', error);
       let errorMessage = '로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';

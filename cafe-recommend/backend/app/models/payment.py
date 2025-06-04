@@ -1,9 +1,9 @@
 from sqlalchemy import Column, String, Boolean, DateTime
 from sqlalchemy.sql import func
-from app.database import Base
+from app.db.base import Base
 
 class Payment(Base):
-    __tablename__ = "payments"
+    # __tablename__ = "payments"
 
     provider = Column(String, primary_key=True, index=True)
     client_id = Column(String)

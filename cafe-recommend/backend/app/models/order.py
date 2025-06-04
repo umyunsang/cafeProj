@@ -4,11 +4,11 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
 
-from app.database import Base
+from app.db.base import Base
 
 if TYPE_CHECKING:
     from .menu import MenuItem  # noqa: F401
-    from .user import User  # noqa: F401
+    # from .user import User  # noqa: F401 # User 모델 사용 안 함
 
 class OrderItem(Base):
     __tablename__ = "order_items"
@@ -31,7 +31,7 @@ class Order(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     order_number = Column(String, unique=True, index=True, nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 비회원 주문 허용
+    # user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # User 모델 사용 안 함
     total_amount = Column(Float, default=0.0)
     status = Column(String, default="pending")  # pending, paid, completed, cancelled, refunded
     payment_method = Column(String, nullable=True)
@@ -56,5 +56,5 @@ class Order(Base):
     refunded_at = Column(DateTime(timezone=True), nullable=True)  # 환불 처리 시간
     
     # 관계 설정
-    user = relationship("app.models.user.User", back_populates="orders")
+    # user = relationship("app.models.user.User", back_populates="orders") # User 모델 사용 안 함
     order_items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan") 

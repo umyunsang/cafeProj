@@ -145,7 +145,7 @@ export function CartModal() {
                               fill
                               className="object-cover"
                               sizes="(max-width: 640px) 64px, 80px"
-                              onError={(e) => { e.currentTarget.src = '/static/menu_images/default-menu.jpg'; }}
+                              onError={(e) => { e.currentTarget.src = '/static/menu_images/default-menu.svg'; }}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">

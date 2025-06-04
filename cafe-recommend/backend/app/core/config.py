@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     # 프론트엔드 URL (.env에서 로드)
     NEXT_PUBLIC_FRONTEND_URL: AnyHttpUrl # 이름 변경 및 타입 검증
 
+    # FRONTEND_URL property 추가 (결제 API 호환성을 위해)
+    @property
+    def FRONTEND_URL(self) -> str:
+        return str(self.NEXT_PUBLIC_FRONTEND_URL)
+
     # 파일 업로드 설정 (경로는 BACKEND_ROOT_PATH 기준으로 동적 생성)
     UPLOAD_DIR_NAME: str = "uploads" 
     STATIC_DIR_NAME: str = "static"

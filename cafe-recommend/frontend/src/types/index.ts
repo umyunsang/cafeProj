@@ -109,9 +109,10 @@ export interface Customer {
 // 채팅 관련 타입 정의
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'error';
   content: string;
   timestamp?: string;
+  isTyping?: boolean;
 }
 
 export interface RecommendedMenu {

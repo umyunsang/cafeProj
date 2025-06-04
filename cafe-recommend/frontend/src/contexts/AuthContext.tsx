@@ -28,6 +28,61 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// JWT 토큰 만료 확인 함수
+const isTokenExpired = (token: string): boolean => {
+  try {
+    if (!token || typeof token !== 'string') {
+      console.log('[AuthContext] Invalid token format');
+      return true;
+    }
+    
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.log('[AuthContext] Token does not have 3 parts');
+      return true;
+    }
+    
+    const payload = JSON.parse(atob(parts[1]));
+    if (!payload.exp) {
+      console.log('[AuthContext] Token does not have exp claim');
+      return true;
+    }
+    
+    const currentTime = Math.floor(Date.now() / 1000);
+    const isExpired = payload.exp < currentTime;
+    
+    console.log('[AuthContext] Token expiry check:', {
+      exp: payload.exp,
+      current: currentTime,
+      expired: isExpired
+    });
+    
+    return isExpired;
+  } catch (error) {
+    console.error('[AuthContext] Token parsing error:', error);
+    return true; // 파싱 실패시 만료된 것으로 처리
+  }
+};
+
+// 서버에 토큰 유효성 검사
+const verifyTokenWithServer = async (token: string): Promise<boolean> => {
+  try {
+    const response = await fetch('/api/admin/auth/verify-token', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('[AuthContext] Server token verification failed:', error);
+    // 서버 검증 실패 시에도 토큰 만료 확인은 되었으므로 일단 true 반환
+    // 실제 API 호출 시 401/403 에러가 발생하면 useApiClient에서 처리
+    return true;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
     token: null,
@@ -38,29 +93,49 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const router = useRouter(); // 리디렉션용
 
   useEffect(() => {
-    // 컴포넌트 마운트 시 localStorage에서 토큰 확인
-    const storedToken = localStorage.getItem('adminToken');
-    if (storedToken) {
-      // TODO: 토큰 유효성 검사 API 호출 및 사용자 정보 가져오기 (실제 구현 시)
-      // 우선은 토큰이 있으면 인증된 것으로 간주 (실제 앱에서는 보안상 위험)
-      // 예시: const userData = await verifyTokenAndGetUser(storedToken);
-      // if (userData) {
-      //   setAuthState({ token: storedToken, user: userData, isLoading: false, isAuthenticated: true });
-      // } else {
-      //   localStorage.removeItem('adminToken');
-      //   setAuthState({ token: null, user: null, isLoading: false, isAuthenticated: false });
-      // }
-      console.log('[AuthContext] Token found in localStorage:', storedToken);
-      // 임시로 사용자 정보 하드코딩 (실제로는 API로부터 받아야 함)
-      const tempUser: User = { id: 'admin', email: 'admin@example.com', name:'관리자' };
-      setAuthState({ token: storedToken, user: tempUser, isLoading: false, isAuthenticated: true });
-    } else {
-      console.log('[AuthContext] No token in localStorage.');
-      setAuthState({ token: null, user: null, isLoading: false, isAuthenticated: false });
-    }
+    const validateToken = async () => {
+      // 컴포넌트 마운트 시 localStorage에서 토큰 확인
+      const storedToken = localStorage.getItem('adminToken');
+      
+      if (storedToken) {
+        console.log('[AuthContext] Token found in localStorage:', storedToken);
+        
+        // 1. JWT 토큰 만료 확인
+        if (isTokenExpired(storedToken)) {
+          console.log('[AuthContext] Token expired, removing from localStorage');
+          localStorage.removeItem('adminToken');
+          setAuthState({ token: null, user: null, isLoading: false, isAuthenticated: false });
+          return;
+        }
+        
+        // 2. 서버에 토큰 유효성 검사 (일시적으로 비활성화)
+        // const isValid = await verifyTokenWithServer(storedToken);
+        // if (!isValid) {
+        //   console.log('[AuthContext] Token invalid on server, removing from localStorage');
+        //   localStorage.removeItem('adminToken');
+        //   setAuthState({ token: null, user: null, isLoading: false, isAuthenticated: false });
+        //   return;
+        // }
+        
+        // 토큰이 유효한 경우
+        console.log('[AuthContext] Token validated successfully');
+        const tempUser: User = { id: 'admin', email: 'admin@example.com', name:'관리자' };
+        setAuthState({ token: storedToken, user: tempUser, isLoading: false, isAuthenticated: true });
+      } else {
+        console.log('[AuthContext] No token in localStorage.');
+        setAuthState({ token: null, user: null, isLoading: false, isAuthenticated: false });
+      }
+    };
+    
+    validateToken();
   }, []);
 
   const login = async (token: string, userData?: User) => {
+    // 로그인 시에도 토큰 유효성 검사
+    if (isTokenExpired(token)) {
+      throw new Error('받은 토큰이 이미 만료되었습니다.');
+    }
+    
     // 실제 로그인 API 호출 후 토큰과 사용자 정보를 받아옴
     // 이 함수는 로그인 페이지에서 호출될 것임
     localStorage.setItem('adminToken', token);

@@ -10,10 +10,10 @@ from .routers.menus import router as menus_router
 from .routers.cart import router as cart_router
 from .routers.order import router as order_router
 from .routers.user_identity import router as user_identity_router
-from .api.admin import auth, dashboard, menu, orders, realtime, settings, inventory
+from .api.admin import auth, dashboard, menu, orders, realtime, settings  # , inventory  # inventory 모델 문제로 임시 비활성화
 from .api.menu import router as menu_api_router
 from .routers.payment import router as payment_router
-from .routers import reviews_router
+# from .routers import reviews_router # 리뷰 라우터 임포트 주석 처리 (이미 routers/__init__.py에서 처리됨)
 from .routers.admin import notifications_router, alerts_router, auth_router as custom_admin_auth_router
 from .core.config import settings as app_settings
 from .core.security import generate_csrf_token, hash_csrf_token, verify_csrf_token
@@ -173,7 +173,7 @@ app.include_router(menus_router, prefix="/api", tags=["menus"])
 app.include_router(cart_router, prefix="/api", tags=["cart"])
 app.include_router(order_router, prefix="/api", tags=["order"])
 app.include_router(user_identity_router, prefix="/api", tags=["user-identity"])
-app.include_router(reviews_router, prefix="/api", tags=["reviews"])
+# app.include_router(reviews_router, prefix="/api", tags=["reviews"]) # 리뷰 라우터 등록 주석 처리
 app.include_router(menu_api_router, prefix="/api/menu", tags=["menu-availability"])
 app.include_router(payment_router, prefix="/api", tags=["payments"])
 
@@ -184,7 +184,7 @@ app.include_router(menu.router, prefix="/api/admin", tags=["admin", "admin:menus
 app.include_router(orders.router, prefix="/api/admin", tags=["admin", "admin:orders"])
 app.include_router(realtime.router, prefix="/api/admin", tags=["admin", "admin:realtime"])
 app.include_router(settings.router, prefix="/api/admin/settings", tags=["admin", "admin:settings"])
-app.include_router(inventory.router, prefix="/api/admin/inventory", tags=["admin", "admin:inventory"])
+# app.include_router(inventory.router, prefix="/api/admin/inventory", tags=["admin", "admin:inventory"]) # inventory 모델 문제로 임시 비활성화
 
 # 관리자 알림 시스템 라우터 등록
 app.include_router(notifications_router, prefix="/api/admin/notifications", tags=["admin", "admin:notifications"])

@@ -22,6 +22,7 @@ import logging
 
 # crud.menu 임포트 추가
 from app.crud import menu as menu_crud
+from app.services.ai_image_service import generate_image_with_dalle
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -219,7 +220,7 @@ async def update_menu(
     elif not db_menu.image_url:
         # 이미지가 없고 기존 이미지도 없는 경우, AI로 이미지 생성
         logger.info(f"메뉴 '{name}' 이미지 없음, AI 이미지 생성 시도 중...")
-        image_url = await generate_menu_image_with_ai(name, description or "", category)
+        image_url = await generate_image_with_dalle(name, description or "")
         if image_url:
             logger.info(f"AI 이미지 생성 성공: {image_url}")
             db_menu.image_url = image_url

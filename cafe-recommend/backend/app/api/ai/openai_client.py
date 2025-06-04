@@ -1,4 +1,5 @@
 import openai
+from openai import OpenAI
 import uuid
 import json
 import os
@@ -11,20 +12,10 @@ from fastapi import HTTPException  # HTTPException import 추가
 from ...core.config import settings
 from ...models.menu import Menu
 
-# OpenAI API 키 설정 (settings 객체에서 가져오도록 수정)
-# os.environ["OPENAI_API_KEY"] = "sk-proj---"
-# openai.api_key = os.environ["OPENAI_API_KEY"]
-
-# settings에서 로드된 API 키 사용
+# OpenAI 클라이언트 초기화
+client = None
 if settings.OPENAI_API_KEY:
-    openai.api_key = settings.OPENAI_API_KEY
-else:
-    # OPENAI_API_KEY가 .env에 없거나 비어있는 경우, 로깅 또는 기본 동작 처리
-    # 예: print("Warning: OPENAI_API_KEY is not set in .env file. OpenAI related features will not work.")
-    # 또는 이 파일 로드 시점에 에러를 발생시켜 문제를 즉시 알릴 수도 있음
-    # 여기서는 openai.api_key가 None으로 유지되어 이후 API 호출 시 에러가 발생하도록 둠.
-    # generate_chat_response 함수에서 이미 키 존재 여부를 확인하고 있음.
-    pass
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 # 세션 메모리 (실제 서비스에서는 Redis 등의 외부 저장소 사용 권장)
 SESSION_MEMORY: Dict[str, List[Dict[str, str]]] = {}
@@ -142,53 +133,40 @@ def remove_markdown(text: str) -> str:
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-async def classify_user_message(user_message: str) -> int:
-    """
-    사용자 메시지를 분석하여 질문 유형을 분류합니다.
-    """
-    if not settings.OPENAI_API_KEY:
-        return 1  # 기본값: 메뉴 추천 요청
-        
-    try:
-        messages = [
-            {"role": "system", "content": CLASSIFY_PROMPT},
-            {"role": "user", "content": user_message}
-        ]
-        
-        response = await asyncio.to_thread(
-            openai.ChatCompletion.create,
-            model=settings.OPENAI_MODEL,
-            messages=messages,
-            temperature=0.3,
-            max_tokens=10 # 분류 작업이므로 max_tokens는 짧게 유지
-        )
-        
-        classification = response.choices[0].message["content"].strip()
-        
-        # 숫자만 추출
-        try:
-            result = int(classification[0])
-            if 1 <= result <= 5:
-                return result
-            return 1
-        except ValueError:
-            return 1
-            
-    except Exception as e:
-        print(f"분류 중 오류 발생: {str(e)}")
-        return 1  # 오류 발생 시 기본값
+def classify_message_fast(user_message: str) -> int:
+    """키워드 기반으로 빠르게 메시지 유형을 분류합니다."""
+    message_lower = user_message.lower()
+    
+    # 메뉴 추천 키워드
+    menu_keywords = ['추천', '메뉴', '음료', '커피', '라떼', '아메리카노', '디저트', '케이크', '달달한', '시원한', '따뜻한', '맛있는']
+    
+    # 매장 정보 키워드  
+    store_keywords = ['영업시간', '위치', '주소', '전화번호', '주차', '와이파이', '비밀번호', '화장실', '반려동물']
+    
+    # 주문 관련 키워드
+    order_keywords = ['주문', '포장', '배달', '결제', '카드', '현금', '카카오페이', '네이버페이', '픽업', '테이크아웃']
+    
+    # 키워드 매칭 점수 계산
+    menu_score = sum(1 for keyword in menu_keywords if keyword in message_lower)
+    store_score = sum(1 for keyword in store_keywords if keyword in message_lower)
+    order_score = sum(1 for keyword in order_keywords if keyword in message_lower)
+    
+    # 가장 높은 점수의 카테고리 반환
+    if menu_score >= store_score and menu_score >= order_score:
+        return 1  # 메뉴 추천
+    elif store_score >= order_score:
+        return 2  # 매장 정보
+    else:
+        return 3  # 주문 정보
 
-async def generate_chat_response(
+async def generate_chat_response_optimized(
     user_message: str, 
     session_id: Optional[str] = None,
     menus: List[Menu] = None
 ) -> Dict[str, Any]:
-    """
-    OpenAI API를 사용하여 사용자 메시지에 대한 응답을 생성합니다.
-    """
-    if not settings.OPENAI_API_KEY:
+    """최적화된 챗봇 응답 생성"""
+    if not client:
         return {
-            # "response": "OpenAI API 키가 설정되지 않았습니다.", # 이전 필드
             "response_sentences": ["OpenAI API 키가 설정되지 않았습니다."],
             "session_id": session_id or str(uuid.uuid4()),
             "recommended_ids": [],
@@ -203,104 +181,131 @@ async def generate_chat_response(
     if session_id not in SESSION_MEMORY:
         SESSION_MEMORY[session_id] = []
     
-    # 메시지 유형 분류
-    message_type = await classify_user_message(user_message)
+    # 빠른 메시지 유형 분류 (API 호출 없음)
+    message_type = classify_message_fast(user_message)
     
-    # 카테고리별 메뉴 정보 생성 - 메뉴 추천 프롬프트 개선
-    if menus:
-        categories = {}
-        for menu_item in menus:
-            category = getattr(menu_item, 'category', '기타')
-            if category not in categories:
-                categories[category] = []
-            categories[category].append(menu_item)
-        
-        # 카테고리별로 구분된 메뉴 정보 생성
-        menu_info_parts = []
-        for category, category_menus in categories.items():
-            category_info = f"[{category}]\n"
-            for menu_item_detail in category_menus: # 내부 루프 변수명 변경
-                category_info += f"ID: {menu_item_detail.id}, 이름: {menu_item_detail.name}, 설명: {menu_item_detail.description}, 가격: {menu_item_detail.price}원\n"
-            menu_info_parts.append(category_info)
-        
-        menu_info = "\n".join(menu_info_parts)
+    # 간소화된 메뉴 정보 생성 (최대 10개 메뉴만)
+    if menus and message_type == 1:
+        # 인기 메뉴 우선으로 최대 10개만 선택
+        limited_menus = menus[:10]
+        menu_info = "주요 메뉴:\n"
+        for menu_item in limited_menus:
+            menu_info += f"{menu_item.name} ({menu_item.price}원)\n"
     else:
-        menu_info = "사용 가능한 메뉴가 없습니다."
+        menu_info = ""
     
-    # 시스템 메시지 설정 - 메시지 유형에 따라 다른 프롬프트 사용
-    system_prompt = SYSTEM_PROMPT
-    if message_type == 2:  # 매장 정보 질문
-        system_prompt = CUSTOMER_SERVICE_PROMPT
-    elif message_type == 3:  # 주문 관련 질문
-        system_prompt = ORDER_INFO_PROMPT
+    # 시스템 프롬프트 간소화
+    if message_type == 1:
+        system_prompt = """카페 AI 바리스타입니다. 친절하고 따뜻하게 고객님께 메뉴를 추천해드립니다.
+
+추천 시 반드시 포함할 내용:
+1. 고객님의 요청에 맞는 이유 설명
+2. 메뉴의 특징과 맛 설명  
+3. 가격 정보
+4. 왜 이 메뉴가 좋은지 구체적인 이유
+
+친절하고 전문적인 어조로 응답하되, 마크다운은 사용하지 마세요."""
+    elif message_type == 2:
+        system_prompt = "카페 고객서비스 담당입니다. 매장 정보를 친절하고 정확하게 안내해드립니다. 마크다운 사용 금지."
+    else:
+        system_prompt = "카페 주문 도우미입니다. 주문 관련 정보를 친절하고 명확하게 안내해드립니다. 마크다운 사용 금지."
     
-    # 시스템 메시지 및 메뉴 정보 추가
+    # 메시지 구성 (간소화)
     messages = [
-        {"role": "system", "content": system_prompt + (f"\n\n사용 가능한 메뉴 목록:\n{menu_info}" if message_type == 1 else "")}
+        {"role": "system", "content": system_prompt + (f"\n{menu_info}" if menu_info else "")}
     ]
     
-    # 이전 대화 기록 추가
-    messages.extend(SESSION_MEMORY[session_id])
-    
-    # 사용자 메시지 추가
+    # 최근 2개 대화만 포함 (컨텍스트 축소)
+    recent_history = SESSION_MEMORY[session_id][-4:] if len(SESSION_MEMORY[session_id]) > 4 else SESSION_MEMORY[session_id]
+    messages.extend(recent_history)
     messages.append({"role": "user", "content": user_message})
     
     try:
-        # API 호출
+        # 최적화된 API 호출
         response = await asyncio.to_thread(
-            openai.ChatCompletion.create,
+            client.chat.completions.create,
             model=settings.OPENAI_MODEL,
             messages=messages,
-            temperature=0.7,
-            max_tokens=1024 
+            temperature=0.5,  # 친근함과 품질을 위해 조금 높임
+            max_tokens=768,   # 상세한 추천 이유를 위해 증가
+            top_p=0.9        # 응답 품질 유지하면서 속도 향상
         )
         
-        # 응답 추출
-        raw_assistant_message = response.choices[0].message["content"].strip()
-        
-        # 마크다운 제거 후처리
+        # 응답 처리
+        raw_assistant_message = response.choices[0].message.content.strip()
         cleaned_assistant_message = remove_markdown(raw_assistant_message)
         
-        # 문장 분리 (마침표 + 공백 또는 마침표만 있는 경우 모두 처리)
-        # 빈 문자열이 생성될 수 있으므로 필터링
-        response_sentences = [sentence.strip() + '.' for sentence in cleaned_assistant_message.split('.') if sentence.strip()]
-        if not response_sentences and cleaned_assistant_message: # 마침표가 아예 없는 짧은 응답 처리
+        # 개선된 문장 분리 (가격 정보 분리 방지)
+        # 마침표 기준 분리하되, 괄호 안의 내용이나 가격은 분리하지 않음
+        sentences = []
+        current_sentence = ""
+        paren_count = 0
+        
+        for char in cleaned_assistant_message:
+            current_sentence += char
+            if char == '(':
+                paren_count += 1
+            elif char == ')':
+                paren_count -= 1
+            elif char in '.!?' and paren_count == 0:
+                # 괄호 밖에서 문장 끝나는 경우만 분리
+                if current_sentence.strip():
+                    sentences.append(current_sentence.strip())
+                current_sentence = ""
+        
+        # 남은 내용이 있으면 추가
+        if current_sentence.strip():
+            sentences.append(current_sentence.strip())
+        
+        # 최대 3문장으로 제한하되, 너무 짧으면 합치기
+        response_sentences = []
+        for sentence in sentences[:3]:
+            if sentence:
+                response_sentences.append(sentence)
+        
+        if not response_sentences and cleaned_assistant_message:
             response_sentences = [cleaned_assistant_message]
-        elif cleaned_assistant_message.endswith('.'): # 마지막 문장이 마침표로 끝나는 경우, 추가된 마침표 제거
-            if response_sentences and response_sentences[-1].endswith('..'):
-                 response_sentences[-1] = response_sentences[-1][:-1]
-
-
-        # 대화 기록 저장 (원본 메시지 저장)
+        
+        # 대화 기록 저장
         SESSION_MEMORY[session_id].append({"role": "user", "content": user_message})
-        SESSION_MEMORY[session_id].append({"role": "assistant", "content": cleaned_assistant_message}) # 분리 전 원본 저장
+        SESSION_MEMORY[session_id].append({"role": "assistant", "content": cleaned_assistant_message})
         
-        # 대화 기록이 너무 길어지면 오래된 메시지 제거 (토큰 제한 고려)
-        if len(SESSION_MEMORY[session_id]) > 10:
-            SESSION_MEMORY[session_id] = SESSION_MEMORY[session_id][-10:]
+        # 세션 기록 제한 (최근 6개 메시지만 유지)
+        if len(SESSION_MEMORY[session_id]) > 6:
+            SESSION_MEMORY[session_id] = SESSION_MEMORY[session_id][-6:]
         
-        # 메시지 유형에 따른 응답 타입 설정
-        response_type = "menu_recommendation"
-        if message_type == 2:
-            response_type = "customer_service"
-        elif message_type == 3:
-            response_type = "order_info"
+        # 응답 타입 설정
+        response_type = ["menu_recommendation", "customer_service", "order_info"][message_type - 1]
         
-        # 추천된 메뉴 ID 추출 (메시지 내용에서 추출) - 개선된 방식
+        # 정확한 메뉴 ID 추출 (AI 응답과 일치하도록 개선)
         recommended_ids = []
-        if menus and message_type == 1:  # 메뉴 추천 요청인 경우에만 수행
-            menu_mentions = {}
-            for menu_item_rec in menus: # 변수명 변경
-                mentions = cleaned_assistant_message.lower().count(menu_item_rec.name.lower())
-                if mentions > 0:
-                    menu_mentions[menu_item_rec.id] = mentions
+        if menus and message_type == 1:
+            response_text = cleaned_assistant_message.lower()
             
-            sorted_menus = sorted(menu_mentions.items(), key=lambda x: x[1], reverse=True)
-            recommended_ids = [menu_id for menu_id, _ in sorted_menus[:3]]
+            # 1단계: 정확한 메뉴 이름 매칭 (우선순위)
+            for menu_item in menus:
+                menu_name_lower = menu_item.name.lower()
+                # 정확한 메뉴 이름이 응답에 포함되어 있는지 확인
+                if menu_name_lower in response_text:
+                    if menu_item.id not in recommended_ids:
+                        recommended_ids.append(menu_item.id)
+                        
+            # 2단계: 부분 매칭 (정확한 매칭이 없을 경우에만)
+            if not recommended_ids:
+                for menu_item in menus[:5]:  # 상위 5개 메뉴만 검사
+                    menu_words = menu_item.name.lower().split()
+                    # 메뉴 이름의 주요 단어들이 응답에 포함되어 있는지 확인
+                    if any(word in response_text for word in menu_words if len(word) > 1):
+                        if menu_item.id not in recommended_ids:
+                            recommended_ids.append(menu_item.id)
+                            if len(recommended_ids) >= 3:
+                                break
+            
+            # 3단계: 응답에 언급된 메뉴가 없으면 빈 리스트 반환 (랜덤 추천 방지)
+            # recommended_ids = recommended_ids[:3]  # 최대 3개로 제한
         
         return {
-            # "response": assistant_message, # 이전 필드
-            "response_sentences": response_sentences if response_sentences else ["죄송합니다, 답변을 이해하지 못했어요."], # 빈 리스트 방지
+            "response_sentences": response_sentences if response_sentences else ["죄송합니다, 답변을 이해하지 못했어요."],
             "session_id": session_id,
             "recommended_ids": recommended_ids,
             "message_type": response_type
@@ -310,7 +315,7 @@ async def generate_chat_response(
         print(f"OpenAI API 응답 생성 중 오류 발생: {str(e)}")
         raise HTTPException(
             status_code=500, 
-            detail="AI 응답을 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+            detail="AI 응답을 생성하는 중 오류가 발생했습니다."
         )
 
 def get_session_history(session_id: str) -> List[Dict[str, str]]:
@@ -322,4 +327,138 @@ def clear_session(session_id: str) -> bool:
     if session_id in SESSION_MEMORY:
         del SESSION_MEMORY[session_id]
         return True
-    return False 
+    return False
+
+async def generate_chat_stream(
+    user_message: str,
+    session_id: Optional[str] = None,
+    menus: List[Menu] = None
+):
+    """
+    OpenAI API를 사용하여 스트리밍 방식으로 응답을 생성합니다.
+    """
+    import json
+    
+    if not client:
+        error_response = {
+            "type": "error",
+            "content": "OpenAI API 키가 설정되지 않았습니다.",
+            "finished": True
+        }
+        yield f"data: {json.dumps(error_response, ensure_ascii=False)}\n\n"
+        return
+
+    # 세션 ID가 없으면 새로 생성
+    if not session_id:
+        session_id = str(uuid.uuid4())
+
+    # 세션 기록이 없으면 초기화
+    if session_id not in SESSION_MEMORY:
+        SESSION_MEMORY[session_id] = []
+
+    try:
+        # 메시지 유형 분류
+        message_type = classify_message_fast(user_message)
+        
+        # 메뉴 정보 생성
+        if menus:
+            categories = {}
+            for menu_item in menus:
+                category = getattr(menu_item, 'category', '기타')
+                if category not in categories:
+                    categories[category] = []
+                categories[category].append(menu_item)
+            
+            menu_info_parts = []
+            for category, category_menus in categories.items():
+                category_info = f"[{category}]\n"
+                for menu_item_detail in category_menus:
+                    category_info += f"ID: {menu_item_detail.id}, 이름: {menu_item_detail.name}, 설명: {menu_item_detail.description}, 가격: {menu_item_detail.price}원\n"
+                menu_info_parts.append(category_info)
+            
+            menu_info = "\n".join(menu_info_parts)
+        else:
+            menu_info = "사용 가능한 메뉴가 없습니다."
+
+        # 시스템 프롬프트 설정
+        system_prompt = SYSTEM_PROMPT
+        if message_type == 2:
+            system_prompt = CUSTOMER_SERVICE_PROMPT
+        elif message_type == 3:
+            system_prompt = ORDER_INFO_PROMPT
+
+        # 메시지 구성
+        messages = [
+            {"role": "system", "content": system_prompt + (f"\n\n사용 가능한 메뉴 목록:\n{menu_info}" if message_type == 1 else "")}
+        ]
+        
+        messages.extend(SESSION_MEMORY[session_id])
+        messages.append({"role": "user", "content": user_message})
+
+        # OpenAI 스트리밍 응답 생성
+        response = await asyncio.to_thread(
+            client.chat.completions.create,
+            model=settings.OPENAI_MODEL,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=1024,
+            stream=True
+        )
+
+        accumulated_content = ""
+        
+        # 스트리밍 응답 처리
+        for chunk in response:
+            if chunk.choices[0].delta.content:
+                content_chunk = chunk.choices[0].delta.content
+                accumulated_content += content_chunk
+                
+                # 청크 전송
+                response_chunk = {
+                    "type": "content",
+                    "content": content_chunk,
+                    "finished": False
+                }
+                yield f"data: {json.dumps(response_chunk, ensure_ascii=False)}\n\n"
+
+        # 마크다운 제거
+        cleaned_content = remove_markdown(accumulated_content)
+        
+        # 대화 기록 저장
+        SESSION_MEMORY[session_id].append({"role": "user", "content": user_message})
+        SESSION_MEMORY[session_id].append({"role": "assistant", "content": cleaned_content})
+        
+        # 대화 기록 길이 제한
+        if len(SESSION_MEMORY[session_id]) > 10:
+            SESSION_MEMORY[session_id] = SESSION_MEMORY[session_id][-10:]
+
+        # 추천 메뉴 ID 추출
+        recommended_ids = []
+        if menus and message_type == 1:
+            menu_mentions = {}
+            for menu_item in menus:
+                mentions = cleaned_content.lower().count(menu_item.name.lower())
+                if mentions > 0:
+                    menu_mentions[menu_item.id] = mentions
+            
+            sorted_menus = sorted(menu_mentions.items(), key=lambda x: x[1], reverse=True)
+            recommended_ids = [menu_id for menu_id, _ in sorted_menus[:3]]
+
+        # 최종 응답
+        final_response = {
+            "type": "complete",
+            "content": cleaned_content,
+            "session_id": session_id,
+            "recommended_ids": recommended_ids,
+            "message_type": "menu_recommendation" if message_type == 1 else "customer_service" if message_type == 2 else "order_info",
+            "finished": True
+        }
+        yield f"data: {json.dumps(final_response, ensure_ascii=False)}\n\n"
+
+    except Exception as e:
+        error_response = {
+            "type": "error",
+            "content": f"스트리밍 응답 생성 중 오류가 발생했습니다: {str(e)}",
+            "finished": True
+        }
+        yield f"data: {json.dumps(error_response, ensure_ascii=False)}\n\n" 

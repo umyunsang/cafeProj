@@ -44,7 +44,7 @@ export function ChatRecommendationCard({
     router.push(`/menu/${id}`);
   };
   
-  const defaultImageUrl = '/static/menu_images/default-menu.jpg';
+  const defaultImageUrl = '/static/menu_images/default-menu.svg';
 
   return (
     <Card 
